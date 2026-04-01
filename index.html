@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
 
@@ -42,7 +43,7 @@
   <!-- BIG PICTURE -->
   <section id="big-picture" class="section-two-col">
     <div class="col-chart">
-      <img src="https://www.figma.com/api/mcp/asset/9f48aaa0-e826-4122-9572-9cdbe6bb2620" alt="Scatterplot: TikTok post count vs Spotify streams">
+      <div id="scatterplot"></div>
     </div>
     <div class="col-text">
       <p class="section-overtitle">Big Picture</p>
@@ -59,7 +60,7 @@
       <p>Digging into the data by genre and release year, clear patterns begin to emerge—certain artists and styles consistently outperform across both platforms.</p>
     </div>
     <div class="col-chart">
-      <img src="https://www.figma.com/api/mcp/asset/7f085fcc-9390-46ba-8698-1e6f72e4f38f" alt="Bar chart: platform trends by genre">
+      <div id="trends-chart"></div>
     </div>
   </section>
 
@@ -68,14 +69,14 @@
     <p class="section-overtitle">Top Songs on Spotify</p>
     <h2>The Biggest Tracks</h2>
     <div class="top-songs-chart">
-      <img src="https://www.figma.com/api/mcp/asset/06c48ed9-a022-4ad4-9c68-fdf219dc34d2" alt="Top songs on Spotify horizontal bar chart">
+      <div id="top-songs-chart"></div>
     </div>
   </section>
 
   <!-- ARTISTS BEHIND THE HITS -->
   <section id="artists" class="section-two-col">
     <div class="col-chart">
-      <img src="https://www.figma.com/api/mcp/asset/5b140590-bac6-4f8b-91d2-34dd6ed7bc5d" alt="Artists behind the hits chart">
+      <div id="artists-chart"></div>
     </div>
     <div class="col-text">
       <p class="section-overtitle">Artists Behind the Hits</p>
@@ -89,8 +90,8 @@
     <p class="section-overtitle">Surprises &amp; Outliers</p>
     <h2>The Unexpected Results</h2>
     <div class="outliers-charts">
-      <img src="https://www.figma.com/api/mcp/asset/e02a4dd3-9884-4d1b-b9c5-71cd9de79b04" alt="Outlier chart 1">
-      <img src="https://www.figma.com/api/mcp/asset/5b140590-bac6-4f8b-91d2-34dd6ed7bc5d" alt="Outlier chart 2">
+      <div id="outlier-chart-1"></div>
+      <div id="outlier-chart-2"></div>
     </div>
   </section>
 
