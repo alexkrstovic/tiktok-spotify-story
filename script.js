@@ -33,7 +33,7 @@ const tooltip = d3.select("body")
   .style("font-size", "13px")
   .style("line-height", "1.5")
   .style("max-width", "240px")
-  .style("z-index", "200");
+  .style("z-index", "2000");
 
 function showTooltip(event, html) {
   tooltip.style("opacity", 1).html(html);
@@ -76,87 +76,411 @@ d3.csv("data/songs.csv").then(function (raw) {
 function buildScatterplot(songs) {
   const data = songs.filter(d => d.tiktokPosts > 0 && d.spotify > 0);
 
+  // Pre-compute regression (reused in both inline + fullscreen)
+  const logX     = data.map(d => Math.log10(d.tiktokPosts));
+  const logY     = data.map(d => Math.log10(d.spotify));
+  const meanX    = d3.mean(logX);
+  const meanY    = d3.mean(logY);
+  const slope    = d3.sum(logX.map((lx, i) => (lx - meanX) * (logY[i] - meanY))) /
+                   d3.sum(logX.map(lx => (lx - meanX) ** 2));
+  const intercept = meanY - slope * meanX;
+  const xDomainMin = d3.min(data, d => d.tiktokPosts);
+  const xDomainMax = d3.max(data, d => d.tiktokPosts);
+
+  // Add expand button above the inline chart
   const container = document.getElementById("scatterplot");
-  const width  = container.clientWidth || 580;
-  const height = Math.round(width * 0.72);
-  const m = { top: 20, right: 20, bottom: 58, left: 68 };
+  const btnWrap = document.createElement("div");
+  btnWrap.style.cssText = "display:flex;justify-content:flex-end;margin-bottom:8px;";
+  const expandBtn = document.createElement("button");
+  expandBtn.textContent = "⛶ Expand";
+  expandBtn.className = "chart-expand-btn";
+  btnWrap.appendChild(expandBtn);
+  container.parentElement.insertBefore(btnWrap, container);
+
+  // Draw inline chart with animation on scroll-into-view
+  const { svg, dots, x, y, iW, iH } = drawScatter("scatterplot", container.clientWidth || 580, data, slope, intercept, xDomainMin, xDomainMax, false, null, true);
+
+  // Start invisible
+  svg.style("opacity", 0);
+
+  const observer = new IntersectionObserver((entries) => {
+    if (!entries[0].isIntersecting) return;
+    observer.disconnect(); // fire once only
+
+    // Fade in the whole SVG
+    svg.transition().duration(600).ease(d3.easeCubicOut).style("opacity", 1);
+
+    // Animate dots from random positions to their real positions
+    dots
+      .attr("transform", () => `translate(${Math.random() * iW},${Math.random() * iH})`)
+      .attr("fill-opacity", 0)
+      .transition()
+        .delay(() => 200 + Math.random() * 400)
+        .duration(900)
+        .ease(d3.easeElasticOut.amplitude(0.8).period(0.4))
+        .attr("transform", d => `translate(${x(d.tiktokPosts)},${y(d.spotify)})`)
+        .attr("fill-opacity", 0.65);
+  }, { threshold: 0.2 });
+
+  observer.observe(container);
+
+  // Fullscreen overlay
+  const overlay = document.createElement("div");
+  overlay.id = "scatter-overlay";
+  overlay.className = "chart-overlay hidden";
+  overlay.innerHTML = `
+    <div class="chart-overlay-inner">
+      <div class="chart-overlay-header">
+        <span class="chart-overlay-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Hover dots for details</span>
+        <button class="chart-close-btn">✕ Close</button>
+      </div>
+      <div class="scatter-controls">
+        <div class="scatter-search-wrap">
+          <input id="scatter-search" type="text" placeholder="Search artist or song…" autocomplete="off">
+          <ul id="scatter-suggestions" class="scatter-suggestions hidden"></ul>
+        </div>
+        <div class="scatter-filters">
+          <span class="filter-label">Popularity</span>
+          <button class="filter-btn active" data-tier="all">All</button>
+          <button class="filter-btn" data-tier="high">High (70+)</button>
+          <button class="filter-btn" data-tier="mid">Mid (40–70)</button>
+          <button class="filter-btn" data-tier="low">Low (&lt;40)</button>
+        </div>
+        <div class="scatter-legend">
+          <span class="legend-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg> High (70+)</span>
+          <span class="legend-item"><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg> Mid (40–70)</span>
+          <span class="legend-item"><svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg> Low (&lt;40)</span>
+        </div>
+      </div>
+      <div id="scatterplot-fs"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Shared filter/search state for the fullscreen chart
+  let fsDotsRef = null;
+  let activeTier = "all";
+  let searchQuery = "";
+
+  function applyFilters() {
+    if (!fsDotsRef) return;
+    fsDotsRef.each(function(d) {
+      const tierMatch = activeTier === "all" ||
+        (activeTier === "high" && d.popularity >= 70) ||
+        (activeTier === "mid"  && d.popularity >= 40 && d.popularity < 70) ||
+        (activeTier === "low"  && d.popularity < 40);
+      const q = searchQuery.toLowerCase();
+      const searchMatch = q === "" ||
+        d.track.toLowerCase().includes(q) ||
+        d.artist.toLowerCase().includes(q);
+      const matched = tierMatch && searchMatch;
+      d3.select(this)
+        .transition().duration(200)
+        .attr("fill-opacity", matched ? 0.75 : 0.06)
+        .attr("stroke", (matched && q !== "") ? "#ffffff" : "none")
+        .attr("stroke-width", 1);
+    });
+  }
+
+  expandBtn.addEventListener("click", () => {
+    overlay.classList.remove("hidden");
+    const fsContainer = document.getElementById("scatterplot-fs");
+    fsContainer.innerHTML = "";
+    const fsW = Math.round(window.innerWidth  * 0.92);
+    const fsH = Math.round(window.innerHeight * 0.78);
+    fsDotsRef = drawScatter("scatterplot-fs", fsW, data, slope, intercept, xDomainMin, xDomainMax, true, fsH).dots;
+    applyFilters();
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => overlay.classList.add("visible"));
+  });
+
+  // Filter buttons
+  overlay.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      overlay.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTier = btn.dataset.tier;
+      applyFilters();
+    });
+  });
+
+  // Search input + suggestions
+  const searchInput = overlay.querySelector("#scatter-search");
+  const suggestionsList = overlay.querySelector("#scatter-suggestions");
+
+  // Build a unique list of "Track — Artist" entries for suggestions
+  const suggestionPool = Array.from(
+    new Map(data.map(d => [`${d.track}||${d.artist}`, d])).values()
+  );
+
+  function showSuggestions(q) {
+    suggestionsList.innerHTML = "";
+    if (q.length < 1) {
+      suggestionsList.classList.add("hidden");
+      return;
+    }
+    const matches = suggestionPool
+      .filter(d =>
+        d.track.toLowerCase().includes(q) ||
+        d.artist.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+
+    if (matches.length === 0) {
+      suggestionsList.classList.add("hidden");
+      return;
+    }
+
+    matches.forEach(d => {
+      const li = document.createElement("li");
+      // Bold the matching portion
+      const label = `${d.track} <span class="suggestion-artist">— ${d.artist}</span>`;
+      li.innerHTML = label;
+      li.addEventListener("mousedown", () => {
+        // mousedown fires before blur so we can set value first
+        searchInput.value = d.track;
+        searchQuery = d.track;
+        suggestionsList.classList.add("hidden");
+        applyFilters();
+      });
+      suggestionsList.appendChild(li);
+    });
+
+    suggestionsList.classList.remove("hidden");
+  }
+
+  searchInput.addEventListener("input", e => {
+    searchQuery = e.target.value;
+    showSuggestions(searchQuery.toLowerCase());
+    applyFilters();
+  });
+
+  searchInput.addEventListener("blur", () => {
+    // Small delay so mousedown on a suggestion fires first
+    setTimeout(() => suggestionsList.classList.add("hidden"), 150);
+  });
+
+  searchInput.addEventListener("focus", () => {
+    if (searchInput.value.length > 0) showSuggestions(searchInput.value.toLowerCase());
+  });
+
+  // Keyboard navigation
+  searchInput.addEventListener("keydown", e => {
+    const items = suggestionsList.querySelectorAll("li");
+    const active = suggestionsList.querySelector("li.suggestion-active");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!active) {
+        items[0]?.classList.add("suggestion-active");
+      } else {
+        const next = active.nextElementSibling;
+        active.classList.remove("suggestion-active");
+        (next || items[0]).classList.add("suggestion-active");
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (active) {
+        const prev = active.previousElementSibling;
+        active.classList.remove("suggestion-active");
+        (prev || items[items.length - 1]).classList.add("suggestion-active");
+      }
+    } else if (e.key === "Enter") {
+      if (active) {
+        active.dispatchEvent(new Event("mousedown"));
+      }
+    } else if (e.key === "Escape") {
+      suggestionsList.classList.add("hidden");
+    }
+  });
+
+  overlay.querySelector(".chart-close-btn").addEventListener("click", closeOverlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) closeOverlay(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeOverlay(); });
+
+  function closeOverlay() {
+    overlay.classList.remove("visible");
+    overlay.addEventListener("transitionend", () => {
+      overlay.classList.add("hidden");
+      document.body.style.overflow = "";
+      hideTooltip();
+    }, { once: true });
+  }
+}
+
+function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDomainMax, zoomable, forcedHeight, _animate) {
+  const height = forcedHeight || Math.round(width * 0.72);
+  const m  = { top: 20, right: 24, bottom: 58, left: 72 };
   const iW = width  - m.left - m.right;
   const iH = height - m.top  - m.bottom;
 
-  const svg = d3.select("#scatterplot").append("svg")
+  const svg = d3.select(`#${containerId}`).append("svg")
     .attr("width", width).attr("height", height)
-    .style("overflow", "visible");
+    .style("overflow", "hidden")
+    .style("cursor", zoomable ? "grab" : "default");
 
-  const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+  // Clip path so dots don't overflow axes when zooming
+  const clipId = `clip-${containerId}`;
+  svg.append("defs").append("clipPath").attr("id", clipId)
+    .append("rect").attr("width", iW).attr("height", iH);
+
+  const root = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
 
   const x = d3.scaleLog()
-    .domain([1, d3.max(data, d => d.tiktokPosts) * 1.2])
+    .domain([1, xDomainMax * 1.2])
     .range([0, iW]);
 
   const y = d3.scaleLog()
     .domain([10000, d3.max(data, d => d.spotify) * 1.2])
     .range([iH, 0]);
 
-  const gridStroke = "rgba(255,255,255,0.06)";
   const axisStroke = "rgba(255,255,255,0.3)";
   const tickFill   = "rgba(255,255,255,0.45)";
+  const gridStroke = "rgba(255,255,255,0.06)";
 
-  // Grid
-  g.append("g").attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5).tickSize(-iH).tickFormat(""))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("line").attr("stroke", gridStroke));
+  // ── Axis groups (updated on zoom) ──
+  const xGridG  = root.append("g").attr("transform", `translate(0,${iH})`);
+  const yGridG  = root.append("g");
+  const xAxisG  = root.append("g").attr("transform", `translate(0,${iH})`);
+  const yAxisG  = root.append("g");
 
-  g.append("g")
-    .call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(""))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("line").attr("stroke", gridStroke));
+  function renderAxes(xS, yS) {
+    xGridG.call(d3.axisBottom(xS).ticks(5).tickSize(-iH).tickFormat(""))
+      .call(ax => ax.select(".domain").remove())
+      .call(ax => ax.selectAll("line").attr("stroke", gridStroke));
 
-  // Axes
-  g.append("g").attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(siFormat))
-    .call(ax => ax.select(".domain").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
+    yGridG.call(d3.axisLeft(yS).ticks(5).tickSize(-iW).tickFormat(""))
+      .call(ax => ax.select(".domain").remove())
+      .call(ax => ax.selectAll("line").attr("stroke", gridStroke));
 
-  g.append("g")
-    .call(d3.axisLeft(y).ticks(5).tickFormat(siFormat))
-    .call(ax => ax.select(".domain").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
+    xAxisG.call(d3.axisBottom(xS).ticks(5).tickFormat(siFormat))
+      .call(ax => ax.select(".domain").attr("stroke", axisStroke))
+      .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
+      .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
+
+    yAxisG.call(d3.axisLeft(yS).ticks(5).tickFormat(siFormat))
+      .call(ax => ax.select(".domain").attr("stroke", axisStroke))
+      .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
+      .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
+  }
+
+  renderAxes(x, y);
 
   // Axis labels
-  g.append("text").attr("x", iW / 2).attr("y", iH + 50)
+  root.append("text").attr("x", iW / 2).attr("y", iH + 50)
     .attr("text-anchor", "middle").attr("fill", tickFill)
     .attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
     .text("TikTok Posts");
 
-  g.append("text").attr("transform", "rotate(-90)").attr("x", -iH / 2).attr("y", -54)
+  root.append("text").attr("transform", "rotate(-90)").attr("x", -iH / 2).attr("y", -58)
     .attr("text-anchor", "middle").attr("fill", tickFill)
     .attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
     .text("Spotify Streams");
 
-  // Dots
-  g.selectAll("circle").data(data).join("circle")
-    .attr("cx", d => x(d.tiktokPosts))
-    .attr("cy", d => y(d.spotify))
-    .attr("r", 3.5)
-    .attr("fill", "#0aff94")
-    .attr("fill-opacity", 0.55)
+  // Clipped group for dots + trend line
+  const chartG = root.append("g").attr("clip-path", `url(#${clipId})`);
+
+  // Trend line
+  const trendLine = chartG.append("line")
+    .attr("stroke", "#ffffff").attr("stroke-width", 1.5)
+    .attr("stroke-dasharray", "6 4").attr("opacity", 0.4);
+
+  function updateTrendLine(xS, yS) {
+    const ty0 = Math.pow(10, slope * Math.log10(xDomainMin) + intercept);
+    const ty1 = Math.pow(10, slope * Math.log10(xDomainMax) + intercept);
+    trendLine
+      .attr("x1", xS(xDomainMin)).attr("y1", yS(ty0))
+      .attr("x2", xS(xDomainMax)).attr("y2", yS(ty1));
+  }
+  updateTrendLine(x, y);
+
+  // Trend label
+  const trendLabel = chartG.append("text")
+    .attr("text-anchor", "end")
+    .attr("fill", "rgba(255,255,255,0.4)")
+    .attr("font-size", "11px").attr("font-family", "Inter, sans-serif")
+    .text("trend");
+
+  function updateTrendLabel(xS, yS) {
+    const ty1 = Math.pow(10, slope * Math.log10(xDomainMax) + intercept);
+    trendLabel.attr("x", xS(xDomainMax) - 4).attr("y", yS(ty1) - 8);
+  }
+  updateTrendLabel(x, y);
+
+  // Shape + color by popularity tier
+  const symSize = zoomable ? 52 : 38;
+
+  function tierOf(d) {
+    if (d.popularity >= 70) return "high";
+    if (d.popularity >= 40) return "mid";
+    return "low";
+  }
+
+  function colorOf(d) {
+    const t = tierOf(d);
+    if (t === "high") return "#4a9eff";  // blue
+    if (t === "mid")  return "#ff8c42";  // orange
+    return "#0aff94";                    // green
+  }
+
+  function symbolOf(d) {
+    const t = tierOf(d);
+    if (t === "high") return d3.symbolCircle;
+    if (t === "mid")  return d3.symbolSquare;
+    return d3.symbolTriangle;
+  }
+
+  function pathOf(d) {
+    return d3.symbol().type(symbolOf(d)).size(symSize)();
+  }
+
+  // Dots as SVG paths
+  const dots = chartG.selectAll("path.dot").data(data).join("path")
+    .attr("class", "dot")
+    .attr("transform", d => `translate(${x(d.tiktokPosts)},${y(d.spotify)})`)
+    .attr("d", d => pathOf(d))
+    .attr("fill", d => colorOf(d))
+    .attr("fill-opacity", 0.65)
     .on("mouseover", function (event, d) {
-      d3.select(this).attr("r", 6).attr("fill-opacity", 1).attr("stroke", "#fff").attr("stroke-width", 1);
+      d3.select(this).attr("fill-opacity", 1).attr("stroke", "#fff").attr("stroke-width", 1);
       showTooltip(event,
-        `<strong style="color:#0aff94">${d.track}</strong><br>
+        `<strong style="color:${colorOf(d)}">${d.track}</strong><br>
          ${d.artist}<br>
          <span style="opacity:.7">TikTok Posts: ${siFormat(d.tiktokPosts)}</span><br>
-         <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span>`
+         <span style="opacity:.7">TikTok Views: ${d.tiktokViews ? siFormat(d.tiktokViews) : "N/A"}</span><br>
+         <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
+         <span style="opacity:.7">Popularity: ${d.popularity ?? "N/A"}</span>`
       );
     })
     .on("mousemove", moveTooltip)
     .on("mouseleave", function () {
-      d3.select(this).attr("r", 3.5).attr("fill-opacity", 0.55).attr("stroke", "none");
+      d3.select(this).attr("fill-opacity", 0.65).attr("stroke", "none");
       hideTooltip();
     });
+
+  // ── Return handles for external use ──
+  if (!zoomable) return { svg, dots, x, y, iW, iH };
+
+  // ── Zoom & pan (fullscreen only) ──
+  {
+    svg.style("cursor", "grab");
+    const zoom = d3.zoom()
+      .scaleExtent([0.8, 40])
+      .translateExtent([[0, 0], [iW, iH]])
+      .on("zoom", (event) => {
+        svg.style("cursor", event.transform.k > 1 ? "grabbing" : "grab");
+        const xNew = event.transform.rescaleX(x);
+        const yNew = event.transform.rescaleY(y);
+
+        dots.attr("transform", d => `translate(${xNew(d.tiktokPosts)},${yNew(d.spotify)})`);
+
+        renderAxes(xNew, yNew);
+        updateTrendLine(xNew, yNew);
+        updateTrendLabel(xNew, yNew);
+      });
+
+    svg.call(zoom);
+  }
+
+  return { svg, dots, x, y, iW, iH };
 }
 
 // ─── 2. Trends: Top 15 Artists by TikTok Posts (bar chart) ─────────────────

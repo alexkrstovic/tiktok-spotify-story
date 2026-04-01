@@ -176,6 +176,10 @@ h2 {
   padding: 100px 130px;
 }
 
+#big-picture {
+  padding-left: 40px;
+}
+
 .section-two-col.section-reverse {
   flex-direction: row-reverse;
 }
@@ -286,6 +290,232 @@ h2 {
   font-size: 16px;
   line-height: 1.6;
   color: #ffffff;
+}
+
+/* ─── Chart expand button ─── */
+.chart-expand-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.chart-expand-btn:hover {
+  border-color: #0aff94;
+  color: #0aff94;
+}
+
+/* ─── Fullscreen overlay ─── */
+.chart-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 12, 20, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.chart-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.chart-overlay.hidden {
+  display: none;
+}
+
+.chart-overlay-inner {
+  width: 94vw;
+  max-height: 94vh;
+  background: #161925;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+}
+
+.chart-overlay.visible .chart-overlay-inner {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.chart-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ─── Scatter controls ─── */
+.scatter-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.scatter-search-wrap {
+  position: relative;
+}
+
+.scatter-search-wrap input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  padding: 6px 12px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.scatter-search-wrap input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.scatter-search-wrap input:focus {
+  border-color: #0aff94;
+}
+
+.scatter-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1e2333;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  z-index: 2100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.scatter-suggestions.hidden {
+  display: none;
+}
+
+.scatter-suggestions li {
+  padding: 8px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scatter-suggestions li:hover,
+.scatter-suggestions li.suggestion-active {
+  background: rgba(10, 255, 148, 0.12);
+  color: #0aff94;
+}
+
+.suggestion-artist {
+  color: rgba(255,255,255,0.4);
+  font-size: 12px;
+}
+
+.scatter-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.45);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: rgba(255,255,255,0.5);
+  color: #ffffff;
+}
+
+.filter-btn.active {
+  background: #0aff94;
+  border-color: #0aff94;
+  color: #161925;
+}
+
+.scatter-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+}
+
+.chart-overlay-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.4);
+}
+
+.chart-close-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.chart-close-btn:hover {
+  border-color: #ff4d6d;
+  color: #ff4d6d;
 }
 
 /* ─── Footer ─── */
