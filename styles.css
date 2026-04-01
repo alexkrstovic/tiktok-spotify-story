@@ -27,8 +27,8 @@ a {
 
 /* ─── Typography ─── */
 h1, h2 {
-  font-family: 'Barlow', 'Inter', sans-serif;
-  font-weight: 500;
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -43,7 +43,7 @@ h2 {
 }
 
 .overtitle {
-  font-family: 'Barlow', 'Inter', sans-serif;
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-weight: 400;
   font-size: 20px;
   line-height: 1;
@@ -51,7 +51,7 @@ h2 {
 }
 
 .section-overtitle {
-  font-family: 'Barlow', 'Inter', sans-serif;
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-weight: 400;
   font-size: 18px;
   line-height: 1;
@@ -161,7 +161,7 @@ h2 {
 }
 
 .tagline-banner p {
-  font-family: 'Barlow', 'Inter', sans-serif;
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 500;
   color: #1e1e1e;
