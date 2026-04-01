@@ -2,74 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TikTok vs Spotify</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Vs Spotify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
   <!-- NAVBAR -->
-  <header>
-    <h3>Top Artists by TikTok Influence</h3>
-    <nav>
+  <header class="navbar">
+    <span class="nav-brand">Tiktok Vs Spotify</span>
+    <nav class="nav-links">
       <a href="#big-picture">Big Picture</a>
       <a href="#trends">Discovering the Trends</a>
       <a href="#top-songs">Top Songs</a>
-      <a href="#artists">Artists</a>
-      <a href="#surprises">Surprises</a>
+      <a href="#artists">Top Artists</a>
+      <a href="#outliers">Outliers</a>
       <a href="#success">What Drives Success</a>
     </nav>
+    <a href="data/songs.csv" class="btn-download" download>Download dataset</a>
   </header>
 
   <!-- HERO -->
-  <section>
-    <h1>How much does TikTok influence Spotify success?</h1>
-    <p>
-      TikTok is where songs blow up—but does that hype turn into real streams?
-      Explore how viral moments connect to Spotify success.
-    </p>
+  <section class="hero">
+    <div class="hero-content">
+      <p class="overtitle">Music, virality, and streaming culture</p>
+      <h1>How much does TikTok influence Spotify success?</h1>
+      <p class="hero-body">From viral sounds to chart-topping hits—how much does TikTok really shape what we listen to? Explore the connection between TikTok buzz and Spotify success across songs and artists.</p>
+    </div>
   </section>
 
-  <!-- BIG STAT -->
-  <section>
-    <h2>What goes viral often gets streamed—but not always</h2>
-  </section>
+  <!-- TAGLINE BANNER -->
+  <div class="tagline-banner">
+    <p>What goes viral often gets streamed—but not always</p>
+  </div>
 
   <!-- BIG PICTURE -->
-  <section id="big-picture">
-    <h2>The Big Picture</h2>
-    <p>Scatterplot goes here</p>
+  <section id="big-picture" class="section-two-col">
+    <div class="col-chart">
+      <img src="https://www.figma.com/api/mcp/asset/9f48aaa0-e826-4122-9572-9cdbe6bb2620" alt="Scatterplot: TikTok post count vs Spotify streams">
+    </div>
+    <div class="col-text">
+      <p class="section-overtitle">Big Picture</p>
+      <h2>The Data at a Glance</h2>
+      <p>A scatterplot of TikTok post counts against Spotify stream counts reveals a complex relationship—viral moments don't always translate to streaming success.</p>
+    </div>
   </section>
 
-  <!-- TRENDS -->
-  <section id="trends">
-    <h2>Discovering the Trends</h2>
-    <p>Trend chart goes here</p>
+  <!-- DISCOVERING THE TRENDS -->
+  <section id="trends" class="section-two-col section-reverse">
+    <div class="col-text">
+      <p class="section-overtitle">Discovering the Trends</p>
+      <h2>Patterns Across Platforms</h2>
+      <p>Digging into the data by genre and release year, clear patterns begin to emerge—certain artists and styles consistently outperform across both platforms.</p>
+    </div>
+    <div class="col-chart">
+      <img src="https://www.figma.com/api/mcp/asset/7f085fcc-9390-46ba-8698-1e6f72e4f38f" alt="Bar chart: platform trends by genre">
+    </div>
   </section>
 
-  <!-- TOP SONGS -->
-  <section id="top-songs">
-    <h2>Top Songs</h2>
-    <p>Top songs chart goes here</p>
+  <!-- TOP SONGS ON SPOTIFY -->
+  <section id="top-songs" class="section-top-songs">
+    <p class="section-overtitle">Top Songs on Spotify</p>
+    <h2>The Biggest Tracks</h2>
+    <div class="top-songs-chart">
+      <img src="https://www.figma.com/api/mcp/asset/06c48ed9-a022-4ad4-9c68-fdf219dc34d2" alt="Top songs on Spotify horizontal bar chart">
+    </div>
   </section>
 
-  <!-- ARTISTS -->
-  <section id="artists">
-    <h2>Artists</h2>
-    <p>Artist chart goes here</p>
+  <!-- ARTISTS BEHIND THE HITS -->
+  <section id="artists" class="section-two-col">
+    <div class="col-chart">
+      <img src="https://www.figma.com/api/mcp/asset/5b140590-bac6-4f8b-91d2-34dd6ed7bc5d" alt="Artists behind the hits chart">
+    </div>
+    <div class="col-text">
+      <p class="section-overtitle">Artists Behind the Hits</p>
+      <h2>Who's Leading the Charts?</h2>
+      <p>Some artists dominate both TikTok and Spotify simultaneously, while others build massive streaming numbers with minimal viral presence.</p>
+    </div>
   </section>
 
-  <!-- SURPRISES -->
-  <section id="surprises">
-    <h2>Surprises</h2>
-    <p>Outlier charts go here</p>
+  <!-- OUTLIERS / SURPRISES -->
+  <section id="outliers" class="section-outliers">
+    <p class="section-overtitle">Surprises &amp; Outliers</p>
+    <h2>The Unexpected Results</h2>
+    <div class="outliers-charts">
+      <img src="https://www.figma.com/api/mcp/asset/e02a4dd3-9884-4d1b-b9c5-71cd9de79b04" alt="Outlier chart 1">
+      <img src="https://www.figma.com/api/mcp/asset/5b140590-bac6-4f8b-91d2-34dd6ed7bc5d" alt="Outlier chart 2">
+    </div>
   </section>
 
-  <!-- SUCCESS -->
-  <section id="success">
-    <h2>What Drives Success</h2>
-    <p>Text + image goes here</p>
+  <!-- WHAT DRIVES SUCCESS -->
+  <section id="success" class="section-success">
+    <div class="success-overlay">
+      <p class="section-overtitle">What Drives Success</p>
+      <h2>The Formula Behind the Hits</h2>
+      <p>Across genres, platforms, and release windows—the data points to a consistent truth about what it takes to break through in today's music landscape.</p>
+    </div>
   </section>
 
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span class="footer-brand">Tiktok Vs Spotify</span>
+    <nav class="footer-nav">
+      <a href="#big-picture">Big Picture</a>
+      <a href="#trends">Discovering the Trends</a>
+      <a href="#top-songs">Top Songs</a>
+      <a href="#artists">Top Artists</a>
+      <a href="#outliers">Outliers</a>
+      <a href="#success">What Drives Success</a>
+    </nav>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
