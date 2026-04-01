@@ -100,6 +100,24 @@ function buildScatterplot(songs) {
   // Draw inline chart with animation on scroll-into-view
   const { svg, dots, x, y, iW, iH } = drawScatter("scatterplot", container.clientWidth || 580, data, slope, intercept, xDomainMin, xDomainMax, false, null, true);
 
+  // Inline legend
+  const legend = document.createElement("div");
+  legend.className = "scatter-inline-legend";
+  legend.innerHTML = `
+    <span class="legend-item">
+      <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg>
+      High popularity (70+)
+    </span>
+    <span class="legend-item">
+      <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg>
+      Mid popularity (40–70)
+    </span>
+    <span class="legend-item">
+      <svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg>
+      Low popularity (&lt;40)
+    </span>`;
+  container.appendChild(legend);
+
   // Start invisible
   svg.style("opacity", 0);
 
@@ -137,6 +155,7 @@ function buildScatterplot(songs) {
       <div class="scatter-controls">
         <div class="scatter-search-wrap">
           <input id="scatter-search" type="text" placeholder="Search artist or song…" autocomplete="off">
+          <button id="scatter-clear" class="scatter-clear hidden" aria-label="Clear search">✕</button>
           <ul id="scatter-suggestions" class="scatter-suggestions hidden"></ul>
         </div>
         <div class="scatter-filters">
@@ -156,10 +175,30 @@ function buildScatterplot(songs) {
     </div>`;
   document.body.appendChild(overlay);
 
-  // Shared filter/search state for the fullscreen chart
+  // Shared filter/search/zoom state for the fullscreen chart
   let fsDotsRef = null;
-  let activeTier = "all";
+  let fsSvgRef  = null;
+  let fsZoomRef = null;
+  let fsXRef    = null;
+  let fsYRef    = null;
+  let fsIWRef   = null;
+  let fsIHRef   = null;
+  let activeTier  = "all";
   let searchQuery = "";
+
+  function panToSong(d) {
+    if (!fsZoomRef || !fsSvgRef || !fsXRef || !fsYRef) return;
+    const targetScale = 8;
+    const cx = fsXRef(d.tiktokPosts);
+    const cy = fsYRef(d.spotify);
+    const tx = fsIWRef  / 2 - targetScale * cx;
+    const ty = fsIHRef / 2 - targetScale * cy;
+    const transform = d3.zoomIdentity.translate(tx, ty).scale(targetScale);
+    fsSvgRef.transition()
+      .duration(900)
+      .ease(d3.easeCubicInOut)
+      .call(fsZoomRef.transform, transform);
+  }
 
   function applyFilters() {
     if (!fsDotsRef) return;
@@ -187,7 +226,14 @@ function buildScatterplot(songs) {
     fsContainer.innerHTML = "";
     const fsW = Math.round(window.innerWidth  * 0.92);
     const fsH = Math.round(window.innerHeight * 0.78);
-    fsDotsRef = drawScatter("scatterplot-fs", fsW, data, slope, intercept, xDomainMin, xDomainMax, true, fsH).dots;
+    const fsChart = drawScatter("scatterplot-fs", fsW, data, slope, intercept, xDomainMin, xDomainMax, true, fsH);
+    fsDotsRef = fsChart.dots;
+    fsSvgRef  = fsChart.svg;
+    fsZoomRef = fsChart.zoom;
+    fsXRef    = fsChart.x;
+    fsYRef    = fsChart.y;
+    fsIWRef   = fsChart.iW;
+    fsIHRef   = fsChart.iH;
     applyFilters();
     document.body.style.overflow = "hidden";
     requestAnimationFrame(() => overlay.classList.add("visible"));
@@ -204,8 +250,23 @@ function buildScatterplot(songs) {
   });
 
   // Search input + suggestions
-  const searchInput = overlay.querySelector("#scatter-search");
+  const searchInput    = overlay.querySelector("#scatter-search");
+  const clearBtn       = overlay.querySelector("#scatter-clear");
   const suggestionsList = overlay.querySelector("#scatter-suggestions");
+
+  function setClearVisible(visible) {
+    clearBtn.classList.toggle("hidden", !visible);
+  }
+
+  clearBtn.addEventListener("mousedown", (e) => {
+    e.preventDefault(); // prevent input blur before clear fires
+    searchInput.value = "";
+    searchQuery = "";
+    setClearVisible(false);
+    suggestionsList.classList.add("hidden");
+    applyFilters();
+    searchInput.focus();
+  });
 
   // Build a unique list of "Track — Artist" entries for suggestions
   const suggestionPool = Array.from(
@@ -241,6 +302,7 @@ function buildScatterplot(songs) {
         searchQuery = d.track;
         suggestionsList.classList.add("hidden");
         applyFilters();
+        panToSong(d);
       });
       suggestionsList.appendChild(li);
     });
@@ -250,6 +312,7 @@ function buildScatterplot(songs) {
 
   searchInput.addEventListener("input", e => {
     searchQuery = e.target.value;
+    setClearVisible(searchQuery.length > 0);
     showSuggestions(searchQuery.toLowerCase());
     applyFilters();
   });
@@ -317,10 +380,33 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
     .style("overflow", "hidden")
     .style("cursor", zoomable ? "grab" : "default");
 
-  // Clip path so dots don't overflow axes when zooming
+  // Defs: clip path + glow filter
   const clipId = `clip-${containerId}`;
-  svg.append("defs").append("clipPath").attr("id", clipId)
+  const filterId = `glow-${containerId}`;
+  const defs = svg.append("defs");
+
+  defs.append("clipPath").attr("id", clipId)
     .append("rect").attr("width", iW).attr("height", iH);
+
+  const filter = defs.append("filter")
+    .attr("id", filterId)
+    .attr("x", "-20%").attr("y", "-20%")
+    .attr("width", "140%").attr("height", "140%");
+  // Tint the blur green, then merge with the original white line on top
+  filter.append("feGaussianBlur")
+    .attr("in", "SourceGraphic")
+    .attr("stdDeviation", 4)
+    .attr("result", "blur");
+  filter.append("feColorMatrix")
+    .attr("in", "blur")
+    .attr("type", "matrix")
+    // R=0, G=1, B=0.58 maps white blur → #0aff94 green
+    .attr("values", "0 0 0 0 0.04  0 0 0 0 1  0 0 0 0 0.58  0 0 0 1.5 0")
+    .attr("result", "greenGlow");
+  filter.append("feMerge").selectAll("feMergeNode")
+    .data(["greenGlow", "SourceGraphic"])
+    .join("feMergeNode")
+    .attr("in", d => d);
 
   const root = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
 
@@ -378,10 +464,13 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   // Clipped group for dots + trend line
   const chartG = root.append("g").attr("clip-path", `url(#${clipId})`);
 
-  // Trend line
+  // Trend line — thick white + green glow
   const trendLine = chartG.append("line")
-    .attr("stroke", "#ffffff").attr("stroke-width", 1.5)
-    .attr("stroke-dasharray", "6 4").attr("opacity", 0.4);
+    .attr("stroke", "#ffffff")
+    .attr("stroke-width", 2.5)
+    .attr("stroke-dasharray", "8 5")
+    .attr("opacity", 1)
+    .attr("filter", `url(#${filterId})`);
 
   function updateTrendLine(xS, yS) {
     const ty0 = Math.pow(10, slope * Math.log10(xDomainMin) + intercept);
@@ -460,9 +549,11 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   if (!zoomable) return { svg, dots, x, y, iW, iH };
 
   // ── Zoom & pan (fullscreen only) ──
-  {
+  let zoomBehaviour = null;
+  if (zoomable) {
     svg.style("cursor", "grab");
-    const zoom = d3.zoom()
+    let zoomEndTimer = null;
+    zoomBehaviour = d3.zoom()
       .scaleExtent([0.8, 40])
       .translateExtent([[0, 0], [iW, iH]])
       .on("zoom", (event) => {
@@ -470,17 +561,25 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
         const xNew = event.transform.rescaleX(x);
         const yNew = event.transform.rescaleY(y);
 
-        dots.attr("transform", d => `translate(${xNew(d.tiktokPosts)},${yNew(d.spotify)})`);
+        // Drop the filter while panning/zooming for performance
+        trendLine.attr("filter", null);
 
+        dots.attr("transform", d => `translate(${xNew(d.tiktokPosts)},${yNew(d.spotify)})`);
         renderAxes(xNew, yNew);
         updateTrendLine(xNew, yNew);
         updateTrendLabel(xNew, yNew);
+
+        // Restore glow 300ms after interaction stops
+        clearTimeout(zoomEndTimer);
+        zoomEndTimer = setTimeout(() => {
+          trendLine.attr("filter", `url(#${filterId})`);
+        }, 300);
       });
 
-    svg.call(zoom);
+    svg.call(zoomBehaviour);
   }
 
-  return { svg, dots, x, y, iW, iH };
+  return { svg, dots, x, y, iW, iH, zoom: zoomBehaviour };
 }
 
 // ─── 2. Trends: Top 15 Artists by TikTok Posts (bar chart) ─────────────────
