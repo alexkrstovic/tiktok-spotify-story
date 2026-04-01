@@ -354,24 +354,69 @@ h2 {
 /* ─── Top Songs ─── */
 .section-top-songs {
   background-color: #0aff94;
-  padding: 80px 130px;
   color: #1e1e1e;
+  position: relative;
+  padding: 60px 0 0 0;
+  overflow: hidden;
 }
 
-.section-top-songs .section-overtitle,
-.section-top-songs h2 {
-  color: #1e1e1e;
+.top-songs-text {
+  padding: 0 130px 40px;
+  max-width: 720px;
+}
+
+.section-top-songs .section-overtitle {
+  color: rgba(0,0,0,0.5);
 }
 
 .section-top-songs h2 {
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 35px;
+  color: #1e1e1e;
   margin-top: 8px;
-  margin-bottom: 40px;
+  margin-bottom: 12px;
+  line-height: 1.1;
 }
 
-.top-songs-chart img {
+.section-top-songs p {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 15px;
+  color: rgba(0,0,0,0.6);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.top-songs-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ts-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(0,0,0,0.55);
+}
+
+.ts-legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0.85;
+}
+
+#top-songs-chart {
   width: 100%;
-  max-height: 500px;
-  object-fit: contain;
+  display: block;
 }
 
 /* ─── Outliers ─── */
