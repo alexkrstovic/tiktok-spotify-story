@@ -188,6 +188,14 @@ h2 {
   flex: 1;
 }
 
+#trends .col-chart {
+  flex: 2;
+}
+
+#trends .col-text {
+  flex: 1;
+}
+
 .section-two-col.section-reverse {
   flex-direction: row-reverse;
 }
@@ -216,6 +224,131 @@ h2 {
   font-size: 16px;
   line-height: 1.6;
   color: #ffffff;
+}
+
+/* ─── Trends chart toggle ─── */
+.trends-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.trends-toggle-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.4);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.trends-toggle-btn:hover {
+  border-color: rgba(255,255,255,0.5);
+  color: #ffffff;
+}
+
+.trends-toggle-btn.active {
+  background: #0aff94;
+  border-color: #0aff94;
+  color: #161925;
+}
+
+/* ─── Trends songs panel ─── */
+.trends-songs-panel {
+  margin-top: 16px;
+  background: #1e2333;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 16px;
+  animation: slideDown 0.25s ease;
+}
+
+.trends-songs-panel.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tsp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tsp-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.6);
+}
+
+.tsp-title strong {
+  color: #0aff94;
+  font-weight: 400;
+}
+
+.tsp-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s;
+}
+
+.tsp-close:hover { color: #ff4d6d; }
+
+.tsp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tsp-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 6px;
+}
+
+.tsp-track {
+  color: #ffffff;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tsp-artist {
+  color: rgba(255,255,255,0.4);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tsp-streams {
+  color: #0aff94;
+  white-space: nowrap;
+  font-size: 11px;
 }
 
 /* ─── Top Songs ─── */
