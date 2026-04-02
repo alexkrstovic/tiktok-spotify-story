@@ -1,3 +1,5 @@
+/* ─── Smooth scroll handled by JS ─── */
+
 /* ─── Reset & Base ─── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -472,6 +474,20 @@ h2 {
   color: #0aff94;
 }
 
+#artists .col-chart {
+  flex: 2;
+}
+
+#artists .col-text {
+  flex: 1;
+}
+
+#artists-chart {
+  width: 100%;
+  display: block;
+  overflow: hidden;
+}
+
 /* ─── Outliers ─── */
 .section-outliers {
   padding: 100px 130px;
@@ -479,28 +495,55 @@ h2 {
 
 .section-outliers h2 {
   margin-top: 8px;
-  margin-bottom: 48px;
+  margin-bottom: 16px;
+}
+
+.outliers-intro {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.6);
+  max-width: 700px;
+  margin-bottom: 56px;
 }
 
 .outliers-charts {
   display: flex;
-  gap: 40px;
+  gap: 56px;
+  align-items: flex-start;
 }
 
-.outliers-charts img {
+.outlier-chart-wrap {
   flex: 1;
-  width: 0;
-  border-radius: 4px;
+}
+
+.outlier-chart-title {
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+.outlier-chart-desc {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 24px;
 }
 
 /* ─── What Drives Success ─── */
 .section-success {
-  min-height: 600px;
+  min-height: 100vh;
   background-image: url('https://www.figma.com/api/mcp/asset/72a11602-8d51-4d63-ab63-d21e5ca07139');
   background-size: cover;
   background-position: center;
   display: flex;
   align-items: center;
+  gap: 80px;
   padding: 100px 130px;
   position: relative;
 }
@@ -509,26 +552,70 @@ h2 {
   content: '';
   position: absolute;
   inset: 0;
-  background-color: rgba(22, 25, 37, 0.6);
+  background-color: rgba(22, 25, 37, 0.78);
 }
 
-.success-overlay {
+.success-left {
   position: relative;
   z-index: 1;
-  max-width: 600px;
+  flex: 1;
 }
 
-.success-overlay h2 {
+.success-left h2 {
   margin-top: 8px;
   margin-bottom: 16px;
 }
 
-.success-overlay p:not(.section-overtitle) {
+.success-body {
   font-family: 'Inter', sans-serif;
   font-weight: 300;
   font-size: 16px;
   line-height: 1.6;
-  color: #ffffff;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 48px;
+}
+
+.success-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.success-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  border-left: 2px solid rgba(10,255,148,0.3);
+  padding-left: 16px;
+}
+
+.stat-number {
+  font-family: 'Host Grotesk', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 38px;
+  color: #0aff94;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stat-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.45);
+  max-width: 200px;
+}
+
+.success-right {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+#success-chart {
+  width: 100%;
+  display: block;
 }
 
 /* ─── Inline scatterplot legend ─── */

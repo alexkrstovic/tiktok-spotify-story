@@ -1,3 +1,33 @@
+// ─── Smooth scroll with ease-in-out ────────────────────────────────────────
+
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener("click", e => {
+    const target = document.querySelector(link.getAttribute("href"));
+    if (!target) return;
+    e.preventDefault();
+
+    const start    = window.scrollY;
+    const end      = target.getBoundingClientRect().top + window.scrollY;
+    const distance = end - start;
+    const duration = 900;
+    let startTime  = null;
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed  = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, start + distance * easeInOutCubic(progress));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+  });
+});
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function parseNum(str) {
@@ -69,6 +99,7 @@ d3.csv("data/songs.csv").then(function (raw) {
   buildTopSongsChart(songs);
   buildArtistsChart(songs);
   buildOutlierCharts(songs);
+  buildSuccessSection(songs);
 });
 
 // ─── 1. Scatterplot: TikTok Posts vs Spotify Streams ───────────────────────
@@ -1049,129 +1080,254 @@ function buildTopSongsChart(songs) {
   observer.observe(container);
 }
 
-// ─── 4. Artists: Top 15 by Spotify Streams (horizontal bar) ────────────────
+// ─── 4. Artists: Top 10 — dual horizontal bars with legend & rank ────────────
 
 function buildArtistsChart(songs) {
   const byArtist = d3.rollups(
     songs.filter(d => d.spotify > 0),
-    v => d3.sum(v, d => d.spotify),
+    v => ({
+      spotify: d3.sum(v, d => d.spotify),
+      tiktok:  d3.sum(v, d => d.tiktokPosts)
+    }),
     d => d.artist
-  ).map(([artist, streams]) => ({ artist, streams }))
-    .sort((a, b) => b.streams - a.streams)
-    .slice(0, 15);
+  ).map(([artist, vals]) => ({ artist, spotify: vals.spotify, tiktok: vals.tiktok }))
+    .sort((a, b) => b.spotify - a.spotify)
+    .slice(0, 10);
 
   const container = document.getElementById("artists-chart");
-  const width  = container.clientWidth || 580;
-  const height = Math.round(width * 0.9);
-  const m = { top: 20, right: 70, bottom: 50, left: 130 };
-  const iW = width  - m.left - m.right;
-  const iH = height - m.top  - m.bottom;
+  const totalW   = container.clientWidth || 600;
+  const labelW   = 130;
+  const barAreaW = totalW - labelW;
+
+  const barH     = 22;
+  const innerGap = 4;
+  const outerGap = 18;
+  const rowH     = barH * 2 + innerGap + outerGap;
+  const legendH  = 36;
+  const topPad   = legendH + 8;
+  const totalH   = byArtist.length * rowH + topPad + 16;
+
+  const maxSpotify = d3.max(byArtist, d => d.spotify);
+  const maxTikTok  = d3.max(byArtist, d => d.tiktok) || 1;
+  const xS = d3.scaleLinear().domain([0, maxSpotify]).range([0, barAreaW - 4]);
+  const xT = d3.scaleLinear().domain([0, maxTikTok]).range([0, barAreaW - 4]);
 
   const svg = d3.select("#artists-chart").append("svg")
-    .attr("width", width).attr("height", height)
-    .style("overflow", "visible");
+    .attr("width", totalW)
+    .attr("height", totalH);
 
-  const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+  // ── Legend ──────────────────────────────────────────────────────────────────
+  const leg = svg.append("g").attr("transform", `translate(${labelW}, 10)`);
 
-  const x = d3.scaleLinear()
-    .domain([0, d3.max(byArtist, d => d.streams) * 1.1])
-    .range([0, iW]);
+  leg.append("rect").attr("x", 0).attr("y", 2)
+    .attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", "#3d6494");
+  leg.append("text").attr("x", 14).attr("y", 7)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.55)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "11px")
+    .text("Spotify Streams");
 
-  const y = d3.scaleBand()
-    .domain(byArtist.map(d => d.artist))
-    .range([0, iH])
-    .padding(0.3);
+  leg.append("rect").attr("x", 130).attr("y", 2)
+    .attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", "#0aff94");
+  leg.append("text").attr("x", 144).attr("y", 7)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.55)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "11px")
+    .text("TikTok Posts");
 
-  const axisStroke = "rgba(255,255,255,0.3)";
-  const tickFill   = "rgba(255,255,255,0.45)";
+  leg.append("text").attr("x", 260).attr("y", 7)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.25)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
+    .attr("font-style", "italic")
+    .text("each bar scaled independently");
 
-  // Grid
-  g.append("g").attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5).tickSize(-iH).tickFormat(""))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("line").attr("stroke", "rgba(255,255,255,0.06)"));
+  // ── Artist rows ─────────────────────────────────────────────────────────────
+  const groups = svg.selectAll(".artist-group")
+    .data(byArtist)
+    .join("g")
+    .attr("class", "artist-group")
+    .attr("transform", (_d, i) => `translate(0, ${topPad + i * rowH})`);
 
-  // Bars
-  g.selectAll("rect").data(byArtist).join("rect")
-    .attr("x", 0)
-    .attr("y", d => y(d.artist))
-    .attr("width", d => x(d.streams))
-    .attr("height", y.bandwidth())
-    .attr("fill", "#0aff94")
-    .attr("fill-opacity", 0.85)
-    .on("mouseover", function (event, d) {
-      d3.select(this).attr("fill-opacity", 1);
+  // Rank number
+  groups.append("text")
+    .attr("x", 8)
+    .attr("y", barH + innerGap / 2)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.22)")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", "10px")
+    .attr("font-weight", "300")
+    .text((_d, i) => `#${i + 1}`);
+
+  // Artist name (with SVG title for full name on hover)
+  groups.append("text")
+    .attr("x", labelW - 14)
+    .attr("y", barH + innerGap / 2)
+    .attr("text-anchor", "end")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "#ffffff")
+    .attr("font-family", "Host Grotesk, Inter, sans-serif")
+    .attr("font-size", "13px")
+    .attr("font-weight", "500")
+    .text(d => truncate(d.artist, 18))
+    .append("title").text(d => d.artist); // native tooltip for full name
+
+  // Background tracks
+  groups.append("rect")
+    .attr("x", labelW).attr("y", 0)
+    .attr("width", barAreaW).attr("height", barH)
+    .attr("fill", "rgba(255,255,255,0.03)");
+
+  groups.append("rect")
+    .attr("x", labelW).attr("y", barH + innerGap)
+    .attr("width", barAreaW).attr("height", barH)
+    .attr("fill", "rgba(10,255,148,0.04)");
+
+  // Metric micro-labels on background track
+  groups.append("text")
+    .attr("x", labelW + 8).attr("y", barH / 2)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.18)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "9px")
+    .attr("pointer-events", "none").text("Spotify Streams");
+
+  groups.append("text")
+    .attr("x", labelW + 8).attr("y", barH + innerGap + barH / 2)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(10,255,148,0.22)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "9px")
+    .attr("pointer-events", "none").text("TikTok Posts");
+
+  // Gap indicator: dashed vertical line at end of Spotify bar through TikTok row
+  // shows where TikTok would need to reach to match Spotify
+  groups.append("line")
+    .attr("class", "gap-line")
+    .attr("x1", d => labelW + xS(d.spotify))
+    .attr("x2", d => labelW + xS(d.spotify))
+    .attr("y1", 0).attr("y2", barH * 2 + innerGap)
+    .attr("stroke", "rgba(255,255,255,0.18)")
+    .attr("stroke-width", 1)
+    .attr("stroke-dasharray", "2,3")
+    .attr("pointer-events", "none")
+    .attr("opacity", 0);
+
+  // Spotify bars (start at 0, animate on scroll)
+  groups.append("rect")
+    .attr("class", "spotify-bar")
+    .attr("x", labelW).attr("y", 0)
+    .attr("width", 0).attr("height", barH)
+    .attr("fill", "#3d6494");
+
+  // TikTok bars
+  groups.append("rect")
+    .attr("class", "tiktok-bar")
+    .attr("x", labelW).attr("y", barH + innerGap)
+    .attr("width", 0).attr("height", barH)
+    .attr("fill", "#0aff94").attr("fill-opacity", 0.85);
+
+  // Value label — Spotify
+  groups.append("text")
+    .attr("class", "val-spotify")
+    .attr("x", d => labelW + xS(d.spotify) - 8)
+    .attr("y", barH / 2)
+    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.7)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "11px")
+    .attr("pointer-events", "none").attr("opacity", 0)
+    .text(d => xS(d.spotify) > 70 ? siFormat(d.spotify) : "");
+
+  // Value label — TikTok
+  groups.append("text")
+    .attr("class", "val-tiktok")
+    .attr("x", d => labelW + xT(d.tiktok) - 8)
+    .attr("y", barH + innerGap + barH / 2)
+    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(0,0,0,0.65)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "11px")
+    .attr("font-weight", "500")
+    .attr("pointer-events", "none").attr("opacity", 0)
+    .text(d => xT(d.tiktok) > 70 ? siFormat(d.tiktok) : "");
+
+  // Tooltips
+  groups
+    .style("cursor", "default")
+    .on("mouseover", function(event, d) {
+      d3.select(this).select(".spotify-bar").attr("fill", "#5580b0");
+      d3.select(this).select(".tiktok-bar").attr("fill-opacity", 1);
       showTooltip(event,
-        `<strong style="color:#0aff94">${d.artist}</strong><br>
-         <span style="opacity:.7">Total Streams: ${siFormat(d.streams)}</span>`
+        `<strong style="color:#fff">${d.artist}</strong><br>
+         <span style="color:rgba(255,255,255,0.55)">Spotify Streams: </span><span style="color:#fff">${siFormat(d.spotify)}</span><br>
+         <span style="color:rgba(10,255,148,0.55)">TikTok Posts: </span><span style="color:#0aff94">${siFormat(d.tiktok)}</span>`
       );
     })
     .on("mousemove", moveTooltip)
-    .on("mouseleave", function () {
-      d3.select(this).attr("fill-opacity", 0.85);
+    .on("mouseleave", function() {
+      d3.select(this).select(".spotify-bar").attr("fill", "#3d6494");
+      d3.select(this).select(".tiktok-bar").attr("fill-opacity", 0.85);
       hideTooltip();
     });
 
-  // Value labels
-  g.selectAll(".bar-label").data(byArtist).join("text")
-    .attr("class", "bar-label")
-    .attr("x", d => x(d.streams) + 5)
-    .attr("y", d => y(d.artist) + y.bandwidth() / 2 + 4)
-    .attr("fill", tickFill)
-    .attr("font-size", "11px")
-    .attr("font-family", "Inter, sans-serif")
-    .text(d => siFormat(d.streams));
-
-  // Y axis
-  g.append("g")
-    .call(d3.axisLeft(y).tickSize(0))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("text")
-      .attr("fill", tickFill).attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
-      .attr("dx", "-8")
-      .text(d => truncate(d, 18)));
-
-  // X axis
-  g.append("g").attr("transform", `translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(siFormat))
-    .call(ax => ax.select(".domain").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
-
-  g.append("text").attr("x", iW / 2).attr("y", iH + 42)
-    .attr("text-anchor", "middle").attr("fill", tickFill)
-    .attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
-    .text("Total Spotify Streams");
+  // Entrance animation via IntersectionObserver (fires once)
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      svg.selectAll(".artist-group").each(function(d, i) {
+        const grp   = d3.select(this);
+        const delay = i * 55;
+        grp.select(".spotify-bar")
+          .transition().delay(delay).duration(900).ease(d3.easeCubicOut)
+          .attr("width", xS(d.spotify));
+        grp.select(".tiktok-bar")
+          .transition().delay(delay + 90).duration(900).ease(d3.easeCubicOut)
+          .attr("width", xT(d.tiktok));
+        grp.select(".gap-line")
+          .transition().delay(delay + 600).duration(400)
+          .attr("opacity", 1);
+        grp.select(".val-spotify")
+          .transition().delay(delay + 750).duration(300)
+          .attr("opacity", 1);
+        grp.select(".val-tiktok")
+          .transition().delay(delay + 840).duration(300)
+          .attr("opacity", 1);
+      });
+    }
+  }, { threshold: 0.1 });
+  observer.observe(container);
 }
 
 // ─── 5. Outliers: two side-by-side charts ──────────────────────────────────
 
 function buildOutlierCharts(songs) {
-  // Chart 1: Viral on TikTok but low Spotify streams
-  // High tiktokViews, spotify < median
   const withBoth = songs.filter(d => d.tiktokViews > 0 && d.spotify > 0);
+  const medianTikTok  = d3.median(withBoth, d => d.tiktokViews);
   const medianSpotify = d3.median(withBoth, d => d.spotify);
 
+  // Chart 1: genuinely viral (tiktokViews > median) AND understreamed (spotify < median)
+  // sorted by tiktokViews/spotify ratio to surface the most extreme mismatches
   const viralLowSpotify = withBoth
-    .filter(d => d.spotify < medianSpotify)
-    .sort((a, b) => b.tiktokViews - a.tiktokViews)
-    .slice(0, 10);
+    .filter(d => d.tiktokViews > medianTikTok && d.spotify < medianSpotify)
+    .sort((a, b) => (b.tiktokViews / b.spotify) - (a.tiktokViews / a.spotify))
+    .slice(0, 8);
 
-  // Chart 2: High Spotify streams but no TikTok presence
+  // Chart 2: top-quartile Spotify streams but zero TikTok posts at all
+  const sortedSpotify = songs.filter(d => d.spotify > 0).map(d => d.spotify).sort(d3.ascending);
+  const p75Spotify = d3.quantile(sortedSpotify, 0.75);
   const streamedNoTiktok = songs
-    .filter(d => d.spotify > 0 && (d.tiktokPosts === null || d.tiktokPosts === 0))
+    .filter(d => d.spotify > p75Spotify && (d.tiktokPosts === null || d.tiktokPosts === 0))
     .sort((a, b) => b.spotify - a.spotify)
-    .slice(0, 10);
+    .slice(0, 8);
 
-  buildOutlierBar("outlier-chart-1", viralLowSpotify, "tiktokViews", "TikTok Views", "Viral but understreamed");
-  buildOutlierBar("outlier-chart-2", streamedNoTiktok, "spotify",    "Spotify Streams", "Streamed but not viral");
+  buildOutlierBar("outlier-chart-1", viralLowSpotify, "tiktokViews", "TikTok Views");
+  buildOutlierBar("outlier-chart-2", streamedNoTiktok, "spotify",    "Spotify Streams");
 }
 
-function buildOutlierBar(containerId, data, valueKey, axisLabel, subtitle) {
+function buildOutlierBar(containerId, data, valueKey, axisLabel) {
   const container = document.getElementById(containerId);
   const width  = container.clientWidth || 480;
-  const height = Math.round(width * 1.1);
-  const m = { top: 30, right: 70, bottom: 50, left: 130 };
+  const height = Math.round(width * 1.05);
+  const m = { top: 10, right: 16, bottom: 50, left: 130 };
   const iW = width  - m.left - m.right;
   const iH = height - m.top  - m.bottom;
 
@@ -1179,86 +1335,275 @@ function buildOutlierBar(containerId, data, valueKey, axisLabel, subtitle) {
     .attr("width", width).attr("height", height)
     .style("overflow", "visible");
 
-  // Subtitle
-  svg.append("text")
-    .attr("x", m.left)
-    .attr("y", 18)
-    .attr("fill", "rgba(255,255,255,0.4)")
-    .attr("font-size", "12px")
-    .attr("font-family", "Inter, sans-serif")
-    .text(subtitle);
-
   const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
 
   const x = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d[valueKey]) * 1.1])
+    .domain([0, d3.max(data, d => d[valueKey]) * 1.05])
     .range([0, iW]);
 
   const y = d3.scaleBand()
     .domain(data.map(d => d.track))
     .range([0, iH])
-    .padding(0.3);
+    .padding(0.28);
 
-  const axisStroke = "rgba(255,255,255,0.3)";
-  const tickFill   = "rgba(255,255,255,0.45)";
+  const axisStroke = "rgba(255,255,255,0.15)";
+  const tickFill   = "rgba(255,255,255,0.4)";
   const barColor   = valueKey === "tiktokViews" ? "#ff4d6d" : "#0aff94";
 
-  // Grid
+  // Grid lines
   g.append("g").attr("transform", `translate(0,${iH})`)
     .call(d3.axisBottom(x).ticks(4).tickSize(-iH).tickFormat(""))
     .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("line").attr("stroke", "rgba(255,255,255,0.06)"));
+    .call(ax => ax.selectAll("line").attr("stroke", "rgba(255,255,255,0.05)"));
 
-  // Bars
-  g.selectAll("rect").data(data).join("rect")
+  // Bars (start at 0 for animation)
+  g.selectAll(".obar").data(data).join("rect")
+    .attr("class", "obar")
     .attr("x", 0)
     .attr("y", d => y(d.track))
-    .attr("width", d => x(d[valueKey]))
+    .attr("width", 0)
     .attr("height", y.bandwidth())
     .attr("fill", barColor)
-    .attr("fill-opacity", 0.8)
-    .on("mouseover", function (event, d) {
+    .attr("fill-opacity", 0.75)
+    .on("mouseover", function(event, d) {
       d3.select(this).attr("fill-opacity", 1);
+      const extra = valueKey === "tiktokViews"
+        ? `<br><span style="color:rgba(255,255,255,0.45)">Spotify Streams: ${siFormat(d.spotify)}</span>`
+        : `<br><span style="color:rgba(255,255,255,0.45)">TikTok Posts: none</span>`;
       showTooltip(event,
         `<strong style="color:${barColor}">${d.track}</strong><br>
-         ${d.artist}<br>
-         <span style="opacity:.7">${axisLabel}: ${siFormat(d[valueKey])}</span>`
+         <span style="color:rgba(255,255,255,0.5)">${d.artist}</span><br>
+         <span style="color:rgba(255,255,255,0.45)">${axisLabel}: ${siFormat(d[valueKey])}</span>${extra}`
       );
     })
     .on("mousemove", moveTooltip)
-    .on("mouseleave", function () {
-      d3.select(this).attr("fill-opacity", 0.8);
+    .on("mouseleave", function() {
+      d3.select(this).attr("fill-opacity", 0.75);
       hideTooltip();
     });
 
-  // Value labels
-  g.selectAll(".bar-label").data(data).join("text")
-    .attr("class", "bar-label")
-    .attr("x", d => x(d[valueKey]) + 5)
-    .attr("y", d => y(d.track) + y.bandwidth() / 2 + 4)
-    .attr("fill", tickFill)
+  // Value labels (start hidden)
+  g.selectAll(".obar-label").data(data).join("text")
+    .attr("class", "obar-label")
+    .attr("x", d => x(d[valueKey]) - 6)
+    .attr("y", d => y(d.track) + y.bandwidth() / 2 + 1)
+    .attr("text-anchor", "end")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", valueKey === "tiktokViews" ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.65)")
     .attr("font-size", "10px")
     .attr("font-family", "Inter, sans-serif")
-    .text(d => siFormat(d[valueKey]));
+    .attr("pointer-events", "none")
+    .attr("opacity", 0)
+    .text(d => x(d[valueKey]) > 50 ? siFormat(d[valueKey]) : "");
 
-  // Y axis
+  // Annotation badge on the most extreme outlier (first bar)
+  if (data.length > 0) {
+    const top = data[0];
+    const annotText = valueKey === "tiktokViews"
+      ? `only ${siFormat(top.spotify)} Spotify streams`
+      : `zero TikTok posts`;
+    g.append("text")
+      .attr("class", "obar-annotation")
+      .attr("x", x(top[valueKey]) - 8)
+      .attr("y", y(top.track) + y.bandwidth() / 2 + 1)
+      .attr("text-anchor", "end")
+      .attr("dominant-baseline", "middle")
+      .attr("fill", "rgba(255,255,255,0.5)")
+      .attr("font-size", "9px")
+      .attr("font-family", "Inter, sans-serif")
+      .attr("font-style", "italic")
+      .attr("pointer-events", "none")
+      .attr("opacity", 0)
+      .text(annotText);
+  }
+
+  // Y axis — track names
   g.append("g")
     .call(d3.axisLeft(y).tickSize(0))
     .call(ax => ax.select(".domain").remove())
     .call(ax => ax.selectAll("text")
-      .attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif")
+      .attr("fill", tickFill).attr("font-size", "11px")
+      .attr("font-family", "Inter, sans-serif")
       .attr("dx", "-8")
-      .text(d => truncate(d, 18)));
+      .text(d => truncate(d, 18))
+      .append("title").text(d => d));
 
   // X axis
   g.append("g").attr("transform", `translate(0,${iH})`)
     .call(d3.axisBottom(x).ticks(4).tickFormat(siFormat))
     .call(ax => ax.select(".domain").attr("stroke", axisStroke))
     .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
-    .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
+    .call(ax => ax.selectAll("text")
+      .attr("fill", tickFill).attr("font-size", "11px")
+      .attr("font-family", "Inter, sans-serif"));
 
   g.append("text").attr("x", iW / 2).attr("y", iH + 42)
-    .attr("text-anchor", "middle").attr("fill", tickFill)
-    .attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
+    .attr("text-anchor", "middle").attr("fill", "rgba(255,255,255,0.3)")
+    .attr("font-size", "11px").attr("font-family", "Inter, sans-serif")
     .text(axisLabel);
+
+  // Entrance animation
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      g.selectAll(".obar").each(function(d, i) {
+        d3.select(this)
+          .transition().delay(i * 60).duration(800).ease(d3.easeCubicOut)
+          .attr("width", x(d[valueKey]));
+      });
+      g.selectAll(".obar-label")
+        .transition().delay((_, i) => i * 60 + 650).duration(250)
+        .attr("opacity", 1);
+      g.select(".obar-annotation")
+        .transition().delay(700).duration(400)
+        .attr("opacity", 1);
+    }
+  }, { threshold: 0.15 });
+  observer.observe(container);
+}
+
+// ─── 6. What Drives Success: stat callouts + verdict chart ───────────────────
+
+function buildSuccessSection(songs) {
+  const buckets = [
+    { label: "No TikTok", color: "#3a4256", min: 0,        max: 0        },
+    { label: "Low",       color: "#2a6e5a", min: 1,        max: 100000   },
+    { label: "Medium",    color: "#1a9e72", min: 100001,   max: 1000000  },
+    { label: "High",      color: "#0adf88", min: 1000001,  max: 10000000 },
+    { label: "Viral",     color: "rgba(255,255,255,0.55)", min: 10000001, max: Infinity },
+  ];
+
+  const valid = songs.filter(d => d.spotify > 0);
+  buckets.forEach(b => {
+    const group = valid.filter(d => {
+      const p = d.tiktokPosts || 0;
+      if (b.label === "No TikTok") return p === 0;
+      return p >= b.min && p <= b.max;
+    });
+    b.avg = d3.mean(group, d => d.spotify) || 0;
+  });
+
+  // Stat callouts
+  const noAvg    = buckets[0].avg;
+  const highAvg  = buckets[3].avg;
+  const viralAvg = buckets[4].avg;
+  const multiplier = (highAvg / noAvg).toFixed(1).replace(/\.0$/, "");
+  const dropPct    = Math.round((1 - viralAvg / highAvg) * 100);
+
+  document.getElementById("success-stats").innerHTML = `
+    <div class="success-stat">
+      <span class="stat-number">${multiplier}×</span>
+      <span class="stat-label">more Spotify streams for High TikTok activity vs. no TikTok at all</span>
+    </div>
+    <div class="success-stat">
+      <span class="stat-number">${dropPct}%</span>
+      <span class="stat-label">drop in average streams from the High tier to the Viral tier</span>
+    </div>
+    <div class="success-stat">
+      <span class="stat-number">${siFormat(highAvg)}</span>
+      <span class="stat-label">average streams at the sweet spot — High TikTok activity</span>
+    </div>`;
+
+  // Verdict chart
+  const container = document.getElementById("success-chart");
+  const width    = container.clientWidth || 400;
+  const labelW   = 90;
+  const valW     = 70;
+  const barAreaW = width - labelW - valW;
+
+  const barH  = 32;
+  const gap   = 10;
+  const rowH  = barH + gap;
+  const topPad = 6;
+  const totalH = buckets.length * rowH + topPad + 28;
+
+  const maxAvg = d3.max(buckets, b => b.avg);
+  const xScale = d3.scaleLinear().domain([0, maxAvg]).range([0, barAreaW]);
+
+  const svg = d3.select("#success-chart").append("svg")
+    .attr("width", width).attr("height", totalH);
+
+  const groups = svg.selectAll(".bucket-group")
+    .data(buckets)
+    .join("g")
+    .attr("class", "bucket-group")
+    .attr("transform", (_d, i) => `translate(0, ${topPad + i * rowH})`);
+
+  // Tier label
+  groups.append("text")
+    .attr("x", labelW - 10).attr("y", barH / 2)
+    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.4)")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", d => d.label === "High" ? "13px" : "12px")
+    .attr("font-weight", d => d.label === "High" ? "500" : "300")
+    .text(d => d.label);
+
+  // Background track
+  groups.append("rect")
+    .attr("x", labelW).attr("y", 0)
+    .attr("width", barAreaW).attr("height", barH)
+    .attr("fill", "rgba(255,255,255,0.04)");
+
+  // Bars (start at 0, animate on scroll)
+  groups.append("rect")
+    .attr("class", "success-bar")
+    .attr("x", labelW).attr("y", 0)
+    .attr("width", 0).attr("height", barH)
+    .attr("fill", d => d.color)
+    .attr("fill-opacity", d => d.label === "High" ? 1 : 0.65);
+
+  // "sweet spot" label inside the High bar
+  groups.filter(d => d.label === "High")
+    .append("text")
+    .attr("class", "success-sweetspot")
+    .attr("x", d => labelW + xScale(d.avg) - 8).attr("y", barH / 2)
+    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(22,25,37,0.65)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
+    .attr("font-style", "italic").attr("pointer-events", "none")
+    .attr("opacity", 0)
+    .text("sweet spot");
+
+  // Value labels
+  groups.append("text")
+    .attr("class", "success-bar-val")
+    .attr("x", d => labelW + xScale(d.avg) + 8).attr("y", barH / 2)
+    .attr("dominant-baseline", "middle")
+    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.35)")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", d => d.label === "High" ? "12px" : "11px")
+    .attr("font-weight", d => d.label === "High" ? "400" : "300")
+    .attr("pointer-events", "none").attr("opacity", 0)
+    .text(d => siFormat(d.avg));
+
+  // X-axis caption
+  svg.append("text")
+    .attr("x", labelW).attr("y", totalH - 4)
+    .attr("fill", "rgba(255,255,255,0.2)")
+    .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
+    .text("Average Spotify Streams by TikTok Activity Level");
+
+  // Entrance animation
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      svg.selectAll(".bucket-group").each(function(d, i) {
+        const grp = d3.select(this);
+        const delay = i * 90;
+        grp.select(".success-bar")
+          .transition().delay(delay).duration(900).ease(d3.easeCubicOut)
+          .attr("width", xScale(d.avg));
+        grp.select(".success-bar-val")
+          .transition().delay(delay + 720).duration(300)
+          .attr("opacity", 1);
+        grp.select(".success-sweetspot")
+          .transition().delay(delay + 800).duration(400)
+          .attr("opacity", 1);
+      });
+    }
+  }, { threshold: 0.2 });
+  observer.observe(container);
 }
