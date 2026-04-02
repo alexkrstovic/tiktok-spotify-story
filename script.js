@@ -1512,115 +1512,184 @@ function buildSuccessSection(songs) {
   document.getElementById("success-stats").innerHTML = `
     <div class="success-stat">
       <span class="stat-number">${multiplier}×</span>
-      <span class="stat-label">more Spotify streams for High TikTok activity vs. no TikTok at all</span>
+      <span class="stat-label">more streams at the sweet spot than with zero TikTok presence</span>
     </div>
     <div class="success-stat">
       <span class="stat-number">${dropPct}%</span>
-      <span class="stat-label">drop in average streams from the High tier to the Viral tier</span>
+      <span class="stat-label">fewer streams for viral songs vs. high-activity songs — virality backfires</span>
     </div>
     <div class="success-stat">
       <span class="stat-number">${siFormat(highAvg)}</span>
-      <span class="stat-label">average streams at the sweet spot — High TikTok activity</span>
+      <span class="stat-label">average streams at the peak — the chart answers the question</span>
     </div>`;
 
-  // Verdict chart
+  // Line + Area chart
   const container = document.getElementById("success-chart");
-  const width    = container.clientWidth || 400;
-  const labelW   = 90;
-  const valW     = 70;
-  const barAreaW = width - labelW - valW;
+  const totalW  = container.clientWidth || 420;
+  const margin  = { top: 60, right: 24, bottom: 48, left: 24 };
+  const chartW  = totalW - margin.left - margin.right;
+  const chartH  = 230;
+  const totalH  = chartH + margin.top + margin.bottom;
 
-  const barH  = 32;
-  const gap   = 10;
-  const rowH  = barH + gap;
-  const topPad = 6;
-  const totalH = buckets.length * rowH + topPad + 28;
+  const xScale = d3.scalePoint()
+    .domain(buckets.map(b => b.label))
+    .range([0, chartW])
+    .padding(0.35);
 
   const maxAvg = d3.max(buckets, b => b.avg);
-  const xScale = d3.scaleLinear().domain([0, maxAvg]).range([0, barAreaW]);
+  const yScale = d3.scaleLinear()
+    .domain([0, maxAvg * 1.2])
+    .range([chartH, 0]);
 
   const svg = d3.select("#success-chart").append("svg")
-    .attr("width", width).attr("height", totalH);
+    .attr("width", totalW).attr("height", totalH);
 
-  const groups = svg.selectAll(".bucket-group")
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Gradient fill under the line
+  const defs = svg.append("defs");
+  const grad = defs.append("linearGradient")
+    .attr("id", "success-area-grad")
+    .attr("x1", "0").attr("y1", "0")
+    .attr("x2", "0").attr("y2", "1");
+  grad.append("stop").attr("offset", "0%")
+    .attr("stop-color", "#0adf88").attr("stop-opacity", 0.32);
+  grad.append("stop").attr("offset", "100%")
+    .attr("stop-color", "#0adf88").attr("stop-opacity", 0.02);
+
+  // Clip path — expands left-to-right during entrance animation
+  defs.append("clipPath").attr("id", "success-clip")
+    .append("rect")
+    .attr("x", 0).attr("y", -margin.top)
+    .attr("width", 0)
+    .attr("height", chartH + margin.top + 20);
+
+  // Subtle horizontal grid lines
+  g.selectAll(".s-grid")
+    .data(yScale.ticks(4))
+    .join("line")
+    .attr("class", "s-grid")
+    .attr("x1", 0).attr("x2", chartW)
+    .attr("y1", d => yScale(d)).attr("y2", d => yScale(d))
+    .attr("stroke", "rgba(255,255,255,0.05)").attr("stroke-width", 1);
+
+  // Area path
+  const areaGen = d3.area()
+    .x(d => xScale(d.label))
+    .y0(chartH)
+    .y1(d => yScale(d.avg))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  g.append("path")
+    .datum(buckets)
+    .attr("fill", "url(#success-area-grad)")
+    .attr("clip-path", "url(#success-clip)")
+    .attr("d", areaGen);
+
+  // Line path
+  const lineGen = d3.line()
+    .x(d => xScale(d.label))
+    .y(d => yScale(d.avg))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  g.append("path")
+    .datum(buckets)
+    .attr("fill", "none")
+    .attr("stroke", "#0adf88")
+    .attr("stroke-width", 2.5)
+    .attr("stroke-linecap", "round")
+    .attr("clip-path", "url(#success-clip)")
+    .attr("d", lineGen);
+
+  // X-axis tier labels
+  g.selectAll(".s-xlabel")
     .data(buckets)
-    .join("g")
-    .attr("class", "bucket-group")
-    .attr("transform", (_d, i) => `translate(0, ${topPad + i * rowH})`);
-
-  // Tier label
-  groups.append("text")
-    .attr("x", labelW - 10).attr("y", barH / 2)
-    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
-    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.4)")
+    .join("text")
+    .attr("class", "s-xlabel")
+    .attr("x", d => xScale(d.label))
+    .attr("y", chartH + 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.38)")
     .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", d => d.label === "High" ? "13px" : "12px")
+    .attr("font-size", d => d.label === "High" ? "13px" : "11px")
     .attr("font-weight", d => d.label === "High" ? "500" : "300")
     .text(d => d.label);
 
-  // Background track
-  groups.append("rect")
-    .attr("x", labelW).attr("y", 0)
-    .attr("width", barAreaW).attr("height", barH)
-    .attr("fill", "rgba(255,255,255,0.04)");
+  // Dots + value labels (hidden until animation)
+  const dotGroup = g.selectAll(".s-dot-group")
+    .data(buckets)
+    .join("g")
+    .attr("class", "s-dot-group")
+    .attr("transform", d => `translate(${xScale(d.label)},${yScale(d.avg)})`)
+    .attr("opacity", 0);
 
-  // Bars (start at 0, animate on scroll)
-  groups.append("rect")
-    .attr("class", "success-bar")
-    .attr("x", labelW).attr("y", 0)
-    .attr("width", 0).attr("height", barH)
-    .attr("fill", d => d.color)
-    .attr("fill-opacity", d => d.label === "High" ? 1 : 0.65);
+  // Outer glow ring on the peak dot
+  dotGroup.filter(d => d.label === "High")
+    .append("circle")
+    .attr("r", 11)
+    .attr("fill", "none")
+    .attr("stroke", "#0aff94")
+    .attr("stroke-width", 1)
+    .attr("stroke-opacity", 0.3);
 
-  // "sweet spot" label inside the High bar
-  groups.filter(d => d.label === "High")
-    .append("text")
-    .attr("class", "success-sweetspot")
-    .attr("x", d => labelW + xScale(d.avg) - 8).attr("y", barH / 2)
-    .attr("text-anchor", "end").attr("dominant-baseline", "middle")
-    .attr("fill", "rgba(22,25,37,0.65)")
-    .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
-    .attr("font-style", "italic").attr("pointer-events", "none")
-    .attr("opacity", 0)
-    .text("sweet spot");
+  dotGroup.append("circle")
+    .attr("r", 5.5)
+    .attr("fill", d => d.label === "High" ? "#0aff94" : d.color)
+    .attr("stroke", "#161925")
+    .attr("stroke-width", 2);
 
-  // Value labels
-  groups.append("text")
-    .attr("class", "success-bar-val")
-    .attr("x", d => labelW + xScale(d.avg) + 8).attr("y", barH / 2)
-    .attr("dominant-baseline", "middle")
-    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.35)")
+  // Value labels above each dot
+  dotGroup.append("text")
+    .attr("y", -16)
+    .attr("text-anchor", "middle")
+    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.4)")
     .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", d => d.label === "High" ? "12px" : "11px")
-    .attr("font-weight", d => d.label === "High" ? "400" : "300")
-    .attr("pointer-events", "none").attr("opacity", 0)
+    .attr("font-size", d => d.label === "High" ? "12px" : "10px")
+    .attr("font-weight", d => d.label === "High" ? "500" : "300")
     .text(d => siFormat(d.avg));
 
-  // X-axis caption
+  // "sweet spot" annotation above the High peak
+  const highB = buckets[3];
+  const annG = g.append("g")
+    .attr("class", "s-annotation")
+    .attr("transform", `translate(${xScale(highB.label)},${yScale(highB.avg) - 38})`)
+    .attr("opacity", 0);
+
+  annG.append("text")
+    .attr("text-anchor", "middle")
+    .attr("fill", "#0aff94")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", "10px")
+    .attr("font-style", "italic")
+    .text("sweet spot ↑");
+
+  // Axis caption
   svg.append("text")
-    .attr("x", labelW).attr("y", totalH - 4)
-    .attr("fill", "rgba(255,255,255,0.2)")
-    .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
-    .text("Average Spotify Streams by TikTok Activity Level");
+    .attr("x", margin.left)
+    .attr("y", totalH - 6)
+    .attr("fill", "rgba(255,255,255,0.18)")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", "10px")
+    .text("Average Spotify streams by TikTok activity tier");
 
   // Entrance animation
   let animated = false;
   const observer = new IntersectionObserver(entries => {
     if (entries[0].isIntersecting && !animated) {
       animated = true;
-      svg.selectAll(".bucket-group").each(function(d, i) {
-        const grp = d3.select(this);
-        const delay = i * 90;
-        grp.select(".success-bar")
-          .transition().delay(delay).duration(900).ease(d3.easeCubicOut)
-          .attr("width", xScale(d.avg));
-        grp.select(".success-bar-val")
-          .transition().delay(delay + 720).duration(300)
-          .attr("opacity", 1);
-        grp.select(".success-sweetspot")
-          .transition().delay(delay + 800).duration(400)
+      // Sweep the clip path left → right to reveal line + area
+      d3.select("#success-clip rect")
+        .transition().duration(1300).ease(d3.easeCubicInOut)
+        .attr("width", chartW + 20);
+      // Dots stagger in after the line passes them
+      dotGroup.each(function(_d, i) {
+        d3.select(this)
+          .transition().delay(400 + i * 150).duration(350)
           .attr("opacity", 1);
       });
+      // Annotation last
+      annG.transition().delay(1500).duration(400).attr("opacity", 1);
     }
   }, { threshold: 0.2 });
   observer.observe(container);
