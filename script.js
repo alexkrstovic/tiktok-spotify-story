@@ -1,3 +1,21 @@
+// ─── Hamburger menu ─────────────────────────────────────────────────────────
+
+const hamburger = document.querySelector('.nav-hamburger');
+const navLinks  = document.querySelector('.nav-links');
+
+if (hamburger && navLinks) {
+  hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('open');
+    navLinks.classList.toggle('nav-open');
+  });
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      hamburger.classList.remove('open');
+      navLinks.classList.remove('nav-open');
+    });
+  });
+}
+
 // ─── Smooth scroll with ease-in-out ────────────────────────────────────────
 
 document.querySelectorAll('a[href^="#"]').forEach(link => {
