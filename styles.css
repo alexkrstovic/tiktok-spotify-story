@@ -419,6 +419,59 @@ h2 {
   display: block;
 }
 
+.ts-legend-item {
+  transition: opacity 0.2s;
+}
+
+.ts-legend-item:hover {
+  opacity: 0.7;
+}
+
+.ts-legend-item.ts-legend-active {
+  outline: 2px solid rgba(0,0,0,0.4);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* ─── Top Songs sort toggle ─── */
+.ts-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 130px 16px;
+}
+
+.ts-sort-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(0,0,0,0.4);
+}
+
+.ts-sort-btn {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 20px;
+  color: rgba(0,0,0,0.4);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.ts-sort-btn:hover {
+  border-color: rgba(0,0,0,0.5);
+  color: rgba(0,0,0,0.7);
+}
+
+.ts-sort-btn.active {
+  background: rgba(0,0,0,0.75);
+  border-color: transparent;
+  color: #0aff94;
+}
+
 /* ─── Outliers ─── */
 .section-outliers {
   padding: 100px 130px;
