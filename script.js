@@ -1,3 +1,70 @@
+// ─── Outlier lightbox ────────────────────────────────────────────────────────
+
+function showOutlierLightbox(d, valueKey, barColor) {
+  const lb = document.getElementById("outlier-lightbox");
+  const isViews = valueKey === "tiktokViews";
+
+  document.getElementById("olb-overtitle").textContent = isViews
+    ? "Viral but understreamed"
+    : "Huge on Spotify, invisible on TikTok";
+  document.getElementById("olb-track").textContent  = d.track;
+  document.getElementById("olb-artist").textContent = d.artist;
+
+  const stats = isViews
+    ? `<div class="olb-stat">
+         <span class="olb-stat-number" style="color:${barColor}">${siFormat(d.tiktokViews)}</span>
+         <span class="olb-stat-label">TikTok views</span>
+       </div>
+       <div class="olb-stat">
+         <span class="olb-stat-number" style="color:rgba(255,255,255,0.6)">${siFormat(d.spotify)}</span>
+         <span class="olb-stat-label">Spotify streams</span>
+       </div>`
+    : `<div class="olb-stat">
+         <span class="olb-stat-number" style="color:${barColor}">${siFormat(d.spotify)}</span>
+         <span class="olb-stat-label">Spotify streams</span>
+       </div>
+       <div class="olb-stat">
+         <span class="olb-stat-number" style="color:rgba(255,255,255,0.6)">0</span>
+         <span class="olb-stat-label">TikTok posts</span>
+       </div>`;
+
+  document.getElementById("olb-stats").innerHTML = stats;
+
+  lb.classList.remove("hidden");
+  requestAnimationFrame(() => lb.classList.add("visible"));
+}
+
+function hideOutlierLightbox() {
+  const lb = document.getElementById("outlier-lightbox");
+  lb.classList.remove("visible");
+  lb.addEventListener("transitionend", () => lb.classList.add("hidden"), { once: true });
+}
+
+// Close lightbox on button or backdrop click
+document.addEventListener("DOMContentLoaded", () => {
+  // Outlier lightbox
+  const lb = document.getElementById("outlier-lightbox");
+  if (lb) {
+    lb.querySelector(".outlier-lightbox-close").addEventListener("click", hideOutlierLightbox);
+    lb.addEventListener("click", e => { if (e.target === lb) hideOutlierLightbox(); });
+  }
+
+  // Trends lightbox
+  const tlb = document.getElementById("trends-lightbox");
+  if (tlb) {
+    tlb.querySelector(".outlier-lightbox-close").addEventListener("click", () => {
+      tlb.classList.remove("visible");
+      tlb.addEventListener("transitionend", () => tlb.classList.add("hidden"), { once: true });
+    });
+    tlb.addEventListener("click", e => {
+      if (e.target === tlb) {
+        tlb.classList.remove("visible");
+        tlb.addEventListener("transitionend", () => tlb.classList.add("hidden"), { once: true });
+      }
+    });
+  }
+});
+
 // ─── Hamburger menu ─────────────────────────────────────────────────────────
 
 const hamburger = document.querySelector('.nav-hamburger');
@@ -745,7 +812,14 @@ function buildTrendsChart(songs) {
   const iW = width  - m.left - m.right;
   const iH = height - m.top  - m.bottom;
 
-  // ── Metric toggle buttons ──
+  // ── Chart header: click hint (left) + metric toggle (right) ──
+  const chartHeader = document.createElement("div");
+  chartHeader.className = "trends-chart-header";
+
+  const clickHint = document.createElement("span");
+  clickHint.className = "trends-click-hint";
+  clickHint.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="vertical-align:middle;margin-right:5px"><circle cx="6" cy="6" r="5.5" stroke="currentColor" stroke-opacity="0.5"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Click a bar to see top songs`;
+
   const toggleWrap = document.createElement("div");
   toggleWrap.className = "trends-toggle";
   Object.entries(metrics).forEach(([key, meta]) => {
@@ -755,7 +829,10 @@ function buildTrendsChart(songs) {
     btn.dataset.metric = key;
     toggleWrap.appendChild(btn);
   });
-  container.appendChild(toggleWrap);
+
+  chartHeader.appendChild(clickHint);
+  chartHeader.appendChild(toggleWrap);
+  container.appendChild(chartHeader);
 
   const svg = d3.select("#trends-chart").append("svg")
     .attr("width", width).attr("height", height)
@@ -816,31 +893,24 @@ function buildTrendsChart(songs) {
     .attr("font-size", "12px").attr("font-family", "Inter, sans-serif")
     .text("TikTok Activity Level");
 
-  // ── Songs panel ──
-  const panel = document.createElement("div");
-  panel.className = "trends-songs-panel hidden";
-  container.appendChild(panel);
-
   function showSongsPanel(d) {
     const top = d.songs
       .filter(s => s.spotify > 0)
       .sort((a, b) => b.spotify - a.spotify)
       .slice(0, 8);
-    panel.innerHTML = `
-      <div class="tsp-header">
-        <span class="tsp-title">Top songs — <strong>${d.label}</strong> TikTok activity</span>
-        <button class="tsp-close">✕</button>
-      </div>
-      <ul class="tsp-list">
-        ${top.map(s => `
-          <li>
-            <span class="tsp-track">${truncate(s.track, 28)}</span>
-            <span class="tsp-artist">${truncate(s.artist, 20)}</span>
-            <span class="tsp-streams">${siFormat(s.spotify)}</span>
-          </li>`).join("")}
-      </ul>`;
-    panel.classList.remove("hidden");
-    panel.querySelector(".tsp-close").addEventListener("click", () => panel.classList.add("hidden"));
+
+    document.getElementById("tlb-overtitle").innerHTML =
+      `Top songs — <strong style="color:#0aff94">${d.label}</strong> TikTok activity`;
+    document.getElementById("tlb-list").innerHTML = top.map(s => `
+      <li>
+        <span class="tlb-track">${s.track}</span>
+        <span class="tlb-artist">${s.artist}</span>
+        <span class="tlb-streams">${siFormat(s.spotify)}</span>
+      </li>`).join("");
+
+    const lb = document.getElementById("trends-lightbox");
+    lb.classList.remove("hidden");
+    requestAnimationFrame(() => lb.classList.add("visible"));
   }
 
   function redraw(metricKey, animate) {
@@ -943,7 +1013,9 @@ function buildTrendsChart(songs) {
     activeMetric = btn.dataset.metric;
     toggleWrap.querySelectorAll(".trends-toggle-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    panel.classList.add("hidden");
+    const tlb = document.getElementById("trends-lightbox");
+    tlb.classList.remove("visible");
+    tlb.addEventListener("transitionend", () => tlb.classList.add("hidden"), { once: true });
     redraw(activeMetric, false);
   });
 }
@@ -1477,38 +1549,32 @@ function buildOutlierBar(containerId, data, valueKey, axisLabel) {
     });
 
   // Value labels (start hidden)
+  // If bar is wide enough (>60px), place label inside at end; otherwise outside to the right
+  const insideFill  = valueKey === "tiktokViews" ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.65)";
+  const outsideFill = "rgba(255,255,255,0.55)";
   g.selectAll(".obar-label").data(data).join("text")
     .attr("class", "obar-label")
-    .attr("x", d => x(d[valueKey]) - 6)
+    .attr("x", d => x(d[valueKey]) > 60 ? x(d[valueKey]) - 6 : x(d[valueKey]) + 6)
     .attr("y", d => y(d.track) + y.bandwidth() / 2 + 1)
-    .attr("text-anchor", "end")
+    .attr("text-anchor", d => x(d[valueKey]) > 60 ? "end" : "start")
     .attr("dominant-baseline", "middle")
-    .attr("fill", valueKey === "tiktokViews" ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.65)")
+    .attr("fill", d => x(d[valueKey]) > 60 ? insideFill : outsideFill)
     .attr("font-size", "10px")
     .attr("font-family", "Inter, sans-serif")
     .attr("pointer-events", "none")
     .attr("opacity", 0)
-    .text(d => x(d[valueKey]) > 50 ? siFormat(d[valueKey]) : "");
+    .text(d => siFormat(d[valueKey]));
 
-  // Annotation badge on the most extreme outlier (first bar)
+  // Caption above the chart — one-line stat about the top entry
   if (data.length > 0) {
     const top = data[0];
-    const annotText = valueKey === "tiktokViews"
-      ? `only ${siFormat(top.spotify)} Spotify streams`
-      : `zero TikTok posts`;
-    g.append("text")
-      .attr("class", "obar-annotation")
-      .attr("x", x(top[valueKey]) - 8)
-      .attr("y", y(top.track) + y.bandwidth() / 2 + 1)
-      .attr("text-anchor", "end")
-      .attr("dominant-baseline", "middle")
-      .attr("fill", "rgba(255,255,255,0.5)")
-      .attr("font-size", "9px")
-      .attr("font-family", "Inter, sans-serif")
-      .attr("font-style", "italic")
-      .attr("pointer-events", "none")
-      .attr("opacity", 0)
-      .text(annotText);
+    const captionText = valueKey === "tiktokViews"
+      ? `Top entry: ${siFormat(top.tiktokViews)} TikTok views — only ${siFormat(top.spotify)} Spotify streams`
+      : `Top entry: ${siFormat(top.spotify)} Spotify streams — zero TikTok posts`;
+    const caption = document.createElement("p");
+    caption.className = "outlier-chart-caption";
+    caption.textContent = captionText;
+    container.insertBefore(caption, container.firstChild);
   }
 
   // Y axis — track names
