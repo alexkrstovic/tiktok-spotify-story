@@ -16,6 +16,44 @@ if (hamburger && navLinks) {
   });
 }
 
+// ─── Heavy scroll feel ───────────────────────────────────────────────────────
+// Intercepts wheel events and applies a lerp so the page decelerates slowly.
+// Lower lerp value = heavier feel. 0.07 is noticeably weighted but not sluggish.
+
+(function () {
+  let target  = window.scrollY;
+  let current = window.scrollY;
+  let ticking = false;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (!ticking) {
+      // Sync position in case nav smooth-scroll moved the page
+      current = window.scrollY;
+      target  = current;
+    }
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    target = Math.max(0, Math.min(max, target + e.deltaY));
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(tick);
+    }
+  }, { passive: false });
+
+  function tick() {
+    const diff = target - current;
+    if (Math.abs(diff) < 0.5) {
+      current = target;
+      window.scrollTo(0, current);
+      ticking = false;
+      return;
+    }
+    current += diff * 0.07;
+    window.scrollTo(0, current);
+    requestAnimationFrame(tick);
+  }
+})();
+
 // ─── Smooth scroll with ease-in-out ────────────────────────────────────────
 
 document.querySelectorAll('a[href^="#"]').forEach(link => {
@@ -27,7 +65,7 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
     const start    = window.scrollY;
     const end      = target.getBoundingClientRect().top + window.scrollY;
     const distance = end - start;
-    const duration = 900;
+    const duration = 1600;
     let startTime  = null;
 
     function easeInOutCubic(t) {
@@ -102,7 +140,7 @@ function hideTooltip() {
 
 d3.csv("data/songs.csv").then(function (raw) {
 
-  const songs = raw.map(d => ({
+  const parsed = raw.map(d => ({
     track:          d["Track"],
     artist:         d["Artist"],
     spotify:        parseNum(d["Spotify Streams"]),
@@ -111,6 +149,21 @@ d3.csv("data/songs.csv").then(function (raw) {
     tiktokLikes:    parseNum(d["TikTok Likes"]),
     popularity:     parseNum(d["Spotify Popularity"]),
   }));
+
+  // Deduplicate: same track+artist can appear multiple times with incomplete data.
+  // Keep the entry with the highest Spotify stream count — it consistently has the most complete data.
+  const deduped = Array.from(
+    d3.rollup(
+      parsed,
+      v => v.reduce((best, d) => d.spotify > best.spotify ? d : best),
+      d => `${d.track}||${d.artist}`
+    ).values()
+  );
+
+  // Drop songs whose title or artist contains encoding artifacts (Unicode replacement character)
+  const songs = deduped.filter(d =>
+    !d.track.includes('\uFFFD') && !d.artist.includes('\uFFFD')
+  );
 
   buildScatterplot(songs);
   buildTrendsChart(songs);
@@ -141,7 +194,7 @@ function buildScatterplot(songs) {
   const btnWrap = document.createElement("div");
   btnWrap.style.cssText = "display:flex;justify-content:flex-end;margin-bottom:8px;";
   const expandBtn = document.createElement("button");
-  expandBtn.textContent = "⛶ Expand";
+  expandBtn.textContent = "⛶ Expand to explore chart";
   expandBtn.className = "chart-expand-btn";
   btnWrap.appendChild(expandBtn);
   container.parentElement.insertBefore(btnWrap, container);
@@ -153,18 +206,21 @@ function buildScatterplot(songs) {
   const legend = document.createElement("div");
   legend.className = "scatter-inline-legend";
   legend.innerHTML = `
-    <span class="legend-item">
-      <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg>
-      High popularity (70+)
-    </span>
-    <span class="legend-item">
-      <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg>
-      Mid popularity (40–70)
-    </span>
-    <span class="legend-item">
-      <svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg>
-      Low popularity (&lt;40)
-    </span>`;
+    <div class="legend-title">Spotify Popularity Score (0–100) — each dot is a song</div>
+    <div class="legend-items">
+      <span class="legend-item">
+        <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg>
+        Popular · 70–100
+      </span>
+      <span class="legend-item">
+        <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg>
+        Mid-tier · 40–69
+      </span>
+      <span class="legend-item">
+        <svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg>
+        Emerging · under 40
+      </span>
+    </div>`;
   container.appendChild(legend);
 
   // Start invisible
@@ -215,9 +271,12 @@ function buildScatterplot(songs) {
           <button class="filter-btn" data-tier="low">Low (&lt;40)</button>
         </div>
         <div class="scatter-legend">
-          <span class="legend-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg> High (70+)</span>
-          <span class="legend-item"><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg> Mid (40–70)</span>
-          <span class="legend-item"><svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg> Low (&lt;40)</span>
+          <div class="legend-title">Spotify Popularity Score (0–100) — each dot is a song</div>
+          <div class="legend-items">
+            <span class="legend-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg> Popular · 70–100</span>
+            <span class="legend-item"><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg> Mid-tier · 40–69</span>
+            <span class="legend-item"><svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg> Emerging · under 40</span>
+          </div>
         </div>
       </div>
       <div id="scatterplot-fs"></div>
@@ -530,16 +589,30 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   }
   updateTrendLine(x, y);
 
-  // Trend label
-  const trendLabel = chartG.append("text")
-    .attr("text-anchor", "end")
-    .attr("fill", "rgba(255,255,255,0.4)")
-    .attr("font-size", "11px").attr("font-family", "Inter, sans-serif")
-    .text("trend");
+  // Trend label — pill background + white text
+  const trendLabelG = chartG.append("g");
+  const pillW = 98, pillH = 20, pillR = 10;
+  trendLabelG.append("rect")
+    .attr("width", pillW).attr("height", pillH)
+    .attr("rx", pillR).attr("ry", pillR)
+    .attr("fill", "rgba(10,12,20,0.72)")
+    .attr("stroke", "rgba(255,255,255,0.18)")
+    .attr("stroke-width", 1);
+  trendLabelG.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.85)")
+    .attr("font-size", "11px")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-weight", "400")
+    .attr("x", pillW / 2).attr("y", pillH / 2)
+    .text("Overall trend");
 
   function updateTrendLabel(xS, yS) {
-    const ty1 = Math.pow(10, slope * Math.log10(xDomainMax) + intercept);
-    trendLabel.attr("x", xS(xDomainMax) - 4).attr("y", yS(ty1) - 8);
+    const ty0 = Math.pow(10, slope * Math.log10(xDomainMin) + intercept);
+    const lx  = xS(xDomainMin) + 6;
+    const ly  = yS(ty0) - pillH - 18;
+    trendLabelG.attr("transform", `translate(${lx},${ly})`);
   }
   updateTrendLabel(x, y);
 
@@ -1318,7 +1391,10 @@ function buildArtistsChart(songs) {
 // ─── 5. Outliers: two side-by-side charts ──────────────────────────────────
 
 function buildOutlierCharts(songs) {
-  const withBoth = songs.filter(d => d.tiktokViews > 0 && d.spotify > 0);
+  // Require at least 100K Spotify streams to exclude TikTok-only sounds and garbled-title tracks
+  const minSpotify = 100_000;
+
+  const withBoth = songs.filter(d => d.tiktokViews > 0 && d.spotify >= minSpotify);
   const medianTikTok  = d3.median(withBoth, d => d.tiktokViews);
   const medianSpotify = d3.median(withBoth, d => d.spotify);
 
@@ -1330,7 +1406,7 @@ function buildOutlierCharts(songs) {
     .slice(0, 8);
 
   // Chart 2: top-quartile Spotify streams but zero TikTok posts at all
-  const sortedSpotify = songs.filter(d => d.spotify > 0).map(d => d.spotify).sort(d3.ascending);
+  const sortedSpotify = songs.filter(d => d.spotify >= minSpotify).map(d => d.spotify).sort(d3.ascending);
   const p75Spotify = d3.quantile(sortedSpotify, 0.75);
   const streamedNoTiktok = songs
     .filter(d => d.spotify > p75Spotify && (d.tiktokPosts === null || d.tiktokPosts === 0))
