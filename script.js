@@ -207,15 +207,20 @@ function hideTooltip() {
 
 d3.csv("data/songs.csv").then(function (raw) {
 
-  const parsed = raw.map(d => ({
-    track:          d["Track"],
-    artist:         d["Artist"],
-    spotify:        parseNum(d["Spotify Streams"]),
-    tiktokPosts:    parseNum(d["TikTok Posts"]),
-    tiktokViews:    parseNum(d["TikTok Views"]),
-    tiktokLikes:    parseNum(d["TikTok Likes"]),
-    popularity:     parseNum(d["Spotify Popularity"]),
-  }));
+  const parsed = raw.map(d => {
+    const dateParts = (d["Release Date"] || "").split("/");
+    const releaseYear = dateParts.length === 3 ? parseInt(dateParts[2]) : null;
+    return {
+      track:          d["Track"],
+      artist:         d["Artist"],
+      spotify:        parseNum(d["Spotify Streams"]),
+      tiktokPosts:    parseNum(d["TikTok Posts"]),
+      tiktokViews:    parseNum(d["TikTok Views"]),
+      tiktokLikes:    parseNum(d["TikTok Likes"]),
+      popularity:     parseNum(d["Spotify Popularity"]),
+      releaseYear,
+    };
+  });
 
   // Deduplicate: same track+artist can appear multiple times with incomplete data.
   // Keep the entry with the highest Spotify stream count - it consistently has the most complete data.
@@ -234,6 +239,7 @@ d3.csv("data/songs.csv").then(function (raw) {
 
   buildScatterplot(songs);
   buildTrendsChart(songs);
+  buildNostalgiaChart(songs);
   buildTopSongsChart(songs);
   buildArtistsChart(songs);
   buildOutlierCharts(songs);
@@ -951,6 +957,134 @@ function buildTrendsChart(songs) {
 }
 
 // ─── 3. Top Songs: Top 15 by Spotify Streams (horizontal bar) ──────────────
+
+// ─── 3b. Nostalgia: TikTok views by release year ────────────────────────────
+
+function buildNostalgiaChart(songs) {
+  const TIKTOK_LAUNCH = 2018;
+  const MIN_VIEWS = 500_000_000; // 500M minimum to keep chart readable
+
+  const data = songs
+    .filter(d => d.tiktokViews >= MIN_VIEWS && d.releaseYear && d.releaseYear >= 1985 && d.releaseYear <= 2024)
+    .sort((a, b) => b.tiktokViews - a.tiktokViews);
+
+  // Top pre-TikTok songs to label
+  const toLabel = data
+    .filter(d => d.releaseYear < TIKTOK_LAUNCH)
+    .slice(0, 5);
+
+  const container = document.getElementById("nostalgia-chart");
+  const totalW = container.clientWidth || 520;
+  const margin = { top: 20, right: 20, bottom: 48, left: 20 };
+  const chartW = totalW - margin.left - margin.right;
+  const chartH = 300;
+  const totalH = chartH + margin.top + margin.bottom;
+
+  const xScale = d3.scaleLinear()
+    .domain([1985, 2024])
+    .range([0, chartW]);
+
+  const yScale = d3.scaleLog()
+    .domain([MIN_VIEWS * 0.8, d3.max(data, d => d.tiktokViews) * 1.3])
+    .range([chartH, 0]);
+
+  const svg = d3.select("#nostalgia-chart").append("svg")
+    .attr("width", totalW).attr("height", totalH);
+
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // TikTok launch reference line
+  g.append("line")
+    .attr("x1", xScale(TIKTOK_LAUNCH)).attr("x2", xScale(TIKTOK_LAUNCH))
+    .attr("y1", 0).attr("y2", chartH)
+    .attr("stroke", "rgba(255,255,255,0.15)")
+    .attr("stroke-width", 1)
+    .attr("stroke-dasharray", "4,4");
+
+  g.append("text")
+    .attr("x", xScale(TIKTOK_LAUNCH) + 6).attr("y", 12)
+    .attr("fill", "rgba(255,255,255,0.25)")
+    .attr("font-size", "10px")
+    .attr("font-family", "Inter, sans-serif")
+    .text("TikTok launches");
+
+  // Dots
+  g.selectAll(".n-dot")
+    .data(data)
+    .join("circle")
+    .attr("class", "n-dot")
+    .attr("cx", d => xScale(d.releaseYear))
+    .attr("cy", d => yScale(d.tiktokViews))
+    .attr("r", 5)
+    .attr("fill", d => d.releaseYear < TIKTOK_LAUNCH ? "#0aff94" : "rgba(255,255,255,0.18)")
+    .attr("opacity", 0)
+    .on("mouseover", function(event, d) {
+      d3.select(this).attr("r", 7);
+      showTooltip(event,
+        `<strong style="color:#0aff94">${d.track}</strong><br>
+         ${d.artist}<br>
+         <span style="opacity:.7">Released: ${d.releaseYear}</span><br>
+         <span style="opacity:.7">TikTok Views: ${siFormat(d.tiktokViews)}</span>`
+      );
+    })
+    .on("mousemove", moveTooltip)
+    .on("mouseleave", function() {
+      d3.select(this).attr("r", 5);
+      hideTooltip();
+    });
+
+  // Labels for top pre-TikTok songs
+  toLabel.forEach(d => {
+    g.append("text")
+      .attr("x", xScale(d.releaseYear))
+      .attr("y", yScale(d.tiktokViews) - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "rgba(255,255,255,0.6)")
+      .attr("font-size", "10px")
+      .attr("font-family", "Inter, sans-serif")
+      .attr("opacity", 0)
+      .attr("class", "n-label")
+      .text(truncate(d.track, 20));
+  });
+
+  // X axis — year ticks
+  g.append("g").attr("transform", `translate(0,${chartH})`)
+    .call(d3.axisBottom(xScale).tickFormat(d3.format("d")).ticks(8).tickSize(0))
+    .call(ax => ax.select(".domain").attr("stroke", "rgba(255,255,255,0.1)"))
+    .call(ax => ax.selectAll("text")
+      .attr("fill", "rgba(255,255,255,0.35)")
+      .attr("font-size", "11px")
+      .attr("font-family", "Inter, sans-serif")
+      .attr("dy", "1.2em"));
+
+  // Legend
+  const leg = svg.append("g").attr("transform", `translate(${margin.left}, ${totalH - 12})`);
+  leg.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 4).attr("fill", "#0aff94");
+  leg.append("text").attr("x", 10).attr("y", 0).attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.4)").attr("font-size", "10px").attr("font-family", "Inter, sans-serif")
+    .text("Released before TikTok");
+  leg.append("circle").attr("cx", 155).attr("cy", 0).attr("r", 4).attr("fill", "rgba(255,255,255,0.25)");
+  leg.append("text").attr("x", 165).attr("y", 0).attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(255,255,255,0.4)").attr("font-size", "10px").attr("font-family", "Inter, sans-serif")
+    .text("Released after TikTok");
+
+  // Entrance animation
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      g.selectAll(".n-dot")
+        .transition().delay((_d, i) => i * 8).duration(400).ease(d3.easeCubicOut)
+        .attr("opacity", 1);
+      g.selectAll(".n-label")
+        .transition().delay(400).duration(400)
+        .attr("opacity", 1);
+    }
+  }, { threshold: 0.2 });
+  observer.observe(container);
+}
+
+// ─── 3c. Top Songs ───────────────────────────────────────────────────────────
 
 function buildTopSongsChart(songs) {
   const data = songs
