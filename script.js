@@ -958,24 +958,6 @@ function buildTopSongsChart(songs) {
     .sort((a, b) => b.spotify - a.spotify)
     .slice(0, 10);
 
-  function tiktokTierColor(d) {
-    const p = d.tiktokPosts || 0;
-    if (p === 0)       return "#111118"; // No TikTok — near black
-    if (p <= 100000)   return "#444455"; // Low — dark grey
-    if (p <= 1000000)  return "#888899"; // Medium — mid grey
-    if (p <= 10000000) return "#ccccdd"; // High — light grey
-    return "#ffffff";                    // Viral — white
-  }
-
-  function tiktokTierLabel(d) {
-    const p = d.tiktokPosts || 0;
-    if (p === 0)       return "No TikTok";
-    if (p <= 100000)   return "Low TikTok";
-    if (p <= 1000000)  return "Medium TikTok";
-    if (p <= 10000000) return "High TikTok";
-    return "Viral on TikTok";
-  }
-
   const container = document.getElementById("top-songs-chart");
   const totalW   = container.clientWidth || window.innerWidth;
   const mT = 24, mB = 60;
@@ -1015,17 +997,16 @@ function buildTopSongsChart(songs) {
     .attr("y", chartH)
     .attr("width", colW)
     .attr("height", 0)
-    .attr("fill", d => tiktokTierColor(d))
+    .attr("fill", "#007A33")
     .attr("fill-opacity", 0.88)
     .attr("rx", 3)
     .on("mouseover", function (event, d) {
       d3.select(this).attr("fill-opacity", 1);
       showTooltip(event,
-        `<strong style="color:#0aff94">${d.track}</strong><br>
+        `<strong>${d.track}</strong><br>
          ${d.artist}<br>
          <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
-         <span style="opacity:.7">TikTok Posts: ${d.tiktokPosts ? siFormat(d.tiktokPosts) : "None"}</span><br>
-         <span style="opacity:.7">TikTok Activity: ${tiktokTierLabel(d)}</span>`
+         <span style="opacity:.7">TikTok Posts: ${d.tiktokPosts ? siFormat(d.tiktokPosts) : "None"}</span>`
       );
     })
     .on("mousemove", moveTooltip)
