@@ -218,7 +218,7 @@ d3.csv("data/songs.csv").then(function (raw) {
   }));
 
   // Deduplicate: same track+artist can appear multiple times with incomplete data.
-  // Keep the entry with the highest Spotify stream count — it consistently has the most complete data.
+  // Keep the entry with the highest Spotify stream count - it consistently has the most complete data.
   const deduped = Array.from(
     d3.rollup(
       parsed,
@@ -269,25 +269,11 @@ function buildScatterplot(songs) {
   // Draw inline chart with animation on scroll-into-view
   const { svg, dots, x, y, iW, iH } = drawScatter("scatterplot", container.clientWidth || 580, data, slope, intercept, xDomainMin, xDomainMax, false, null, true);
 
-  // Inline legend
+  // Inline legend - size key
   const legend = document.createElement("div");
   legend.className = "scatter-inline-legend";
   legend.innerHTML = `
-    <div class="legend-title">Spotify Popularity Score (0–100) — each dot is a song</div>
-    <div class="legend-items">
-      <span class="legend-item">
-        <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg>
-        Popular · 70–100
-      </span>
-      <span class="legend-item">
-        <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg>
-        Mid-tier · 40–69
-      </span>
-      <span class="legend-item">
-        <svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg>
-        Emerging · under 40
-      </span>
-    </div>`;
+    <div class="legend-title">Each dot is one song</div>`;
   container.appendChild(legend);
 
   // Start invisible
@@ -295,21 +281,22 @@ function buildScatterplot(songs) {
 
   const observer = new IntersectionObserver((entries) => {
     if (!entries[0].isIntersecting) return;
-    observer.disconnect(); // fire once only
+    observer.disconnect();
 
     // Fade in the whole SVG
     svg.transition().duration(600).ease(d3.easeCubicOut).style("opacity", 1);
 
-    // Animate dots from random positions to their real positions
+    // Animate dots from center outward
     dots
-      .attr("transform", () => `translate(${Math.random() * iW},${Math.random() * iH})`)
+      .attr("cx", iW / 2).attr("cy", iH / 2)
       .attr("fill-opacity", 0)
       .transition()
         .delay(() => 200 + Math.random() * 400)
         .duration(900)
         .ease(d3.easeElasticOut.amplitude(0.8).period(0.4))
-        .attr("transform", d => `translate(${x(d.tiktokPosts)},${y(d.spotify)})`)
-        .attr("fill-opacity", 0.65);
+        .attr("cx", d => x(d.tiktokPosts))
+        .attr("cy", d => y(d.spotify))
+        .attr("fill-opacity", 0.45);
   }, { threshold: 0.2 });
 
   observer.observe(container);
@@ -322,7 +309,14 @@ function buildScatterplot(songs) {
     <div class="chart-overlay-inner">
       <div class="chart-overlay-header">
         <span class="chart-overlay-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Hover dots for details</span>
-        <button class="chart-close-btn">✕ Close</button>
+        <div class="chart-overlay-controls">
+          <div class="scatter-zoom-wrap">
+            <span class="scatter-zoom-label">Zoom</span>
+            <span id="scatter-zoom-level" class="scatter-zoom-level">100%</span>
+            <button id="scatter-reset-btn" class="scatter-reset-btn">Reset view</button>
+          </div>
+          <button class="chart-close-btn">✕ Close</button>
+        </div>
       </div>
       <div class="scatter-controls">
         <div class="scatter-search-wrap">
@@ -330,20 +324,8 @@ function buildScatterplot(songs) {
           <button id="scatter-clear" class="scatter-clear hidden" aria-label="Clear search">✕</button>
           <ul id="scatter-suggestions" class="scatter-suggestions hidden"></ul>
         </div>
-        <div class="scatter-filters">
-          <span class="filter-label">Popularity</span>
-          <button class="filter-btn active" data-tier="all">All</button>
-          <button class="filter-btn" data-tier="high">High (70+)</button>
-          <button class="filter-btn" data-tier="mid">Mid (40–70)</button>
-          <button class="filter-btn" data-tier="low">Low (&lt;40)</button>
-        </div>
         <div class="scatter-legend">
-          <div class="legend-title">Spotify Popularity Score (0–100) — each dot is a song</div>
-          <div class="legend-items">
-            <span class="legend-item"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#4a9eff" fill-opacity="0.85"/></svg> Popular · 70–100</span>
-            <span class="legend-item"><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#ff8c42" fill-opacity="0.85"/></svg> Mid-tier · 40–69</span>
-            <span class="legend-item"><svg width="12" height="14"><polygon points="6,1 12,13 0,13" fill="#0aff94" fill-opacity="0.85"/></svg> Emerging · under 40</span>
-          </div>
+          <div class="legend-title">Each dot is one song - hover for details</div>
         </div>
       </div>
       <div id="scatterplot-fs"></div>
@@ -358,7 +340,6 @@ function buildScatterplot(songs) {
   let fsYRef    = null;
   let fsIWRef   = null;
   let fsIHRef   = null;
-  let activeTier  = "all";
   let searchQuery = "";
 
   function panToSong(d) {
@@ -378,18 +359,13 @@ function buildScatterplot(songs) {
   function applyFilters() {
     if (!fsDotsRef) return;
     fsDotsRef.each(function(d) {
-      const tierMatch = activeTier === "all" ||
-        (activeTier === "high" && d.popularity >= 70) ||
-        (activeTier === "mid"  && d.popularity >= 40 && d.popularity < 70) ||
-        (activeTier === "low"  && d.popularity < 40);
       const q = searchQuery.toLowerCase();
-      const searchMatch = q === "" ||
+      const matched = q === "" ||
         d.track.toLowerCase().includes(q) ||
         d.artist.toLowerCase().includes(q);
-      const matched = tierMatch && searchMatch;
       d3.select(this)
         .transition().duration(200)
-        .attr("fill-opacity", matched ? 0.75 : 0.06)
+        .attr("fill-opacity", matched ? (q === "" ? 0.45 : 0.85) : 0.06)
         .attr("stroke", (matched && q !== "") ? "#ffffff" : "none")
         .attr("stroke-width", 1);
     });
@@ -410,19 +386,18 @@ function buildScatterplot(songs) {
     fsIWRef   = fsChart.iW;
     fsIHRef   = fsChart.iH;
     applyFilters();
+
+    // Reset view button
+    document.getElementById("scatter-reset-btn").addEventListener("click", () => {
+      fsSvgRef.transition().duration(600).ease(d3.easeCubicInOut)
+        .call(fsZoomRef.transform, d3.zoomIdentity);
+      document.getElementById("scatter-zoom-level").textContent = "100%";
+    });
+
     document.body.style.overflow = "hidden";
     requestAnimationFrame(() => overlay.classList.add("visible"));
   });
 
-  // Filter buttons
-  overlay.querySelectorAll(".filter-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      overlay.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      activeTier = btn.dataset.tier;
-      applyFilters();
-    });
-  });
 
   // Search input + suggestions
   const searchInput    = overlay.querySelector("#scatter-search");
@@ -443,7 +418,7 @@ function buildScatterplot(songs) {
     searchInput.focus();
   });
 
-  // Build a unique list of "Track — Artist" entries for suggestions
+  // Build a unique list of "Track - Artist" entries for suggestions
   const suggestionPool = Array.from(
     new Map(data.map(d => [`${d.track}||${d.artist}`, d])).values()
   );
@@ -469,7 +444,7 @@ function buildScatterplot(songs) {
     matches.forEach(d => {
       const li = document.createElement("li");
       // Bold the matching portion
-      const label = `${d.track} <span class="suggestion-artist">— ${d.artist}</span>`;
+      const label = `${d.track} <span class="suggestion-artist">- ${d.artist}</span>`;
       li.innerHTML = label;
       li.addEventListener("mousedown", () => {
         // mousedown fires before blur so we can set value first
@@ -639,7 +614,7 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   // Clipped group for dots + trend line
   const chartG = root.append("g").attr("clip-path", `url(#${clipId})`);
 
-  // Trend line — thick white + green glow
+  // Trend line - thick white + green glow
   const trendLine = chartG.append("line")
     .attr("stroke", "#ffffff")
     .attr("stroke-width", 2.5)
@@ -656,7 +631,7 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   }
   updateTrendLine(x, y);
 
-  // Trend label — pill background + white text
+  // Trend label - pill background + white text
   const trendLabelG = chartG.append("g");
   const pillW = 98, pillH = 20, pillR = 10;
   trendLabelG.append("rect")
@@ -683,54 +658,27 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
   }
   updateTrendLabel(x, y);
 
-  // Shape + color by popularity tier
-  const symSize = zoomable ? 52 : 38;
-
-  function tierOf(d) {
-    if (d.popularity >= 70) return "high";
-    if (d.popularity >= 40) return "mid";
-    return "low";
-  }
-
-  function colorOf(d) {
-    const t = tierOf(d);
-    if (t === "high") return "#4a9eff";  // blue
-    if (t === "mid")  return "#ff8c42";  // orange
-    return "#0aff94";                    // green
-  }
-
-  function symbolOf(d) {
-    const t = tierOf(d);
-    if (t === "high") return d3.symbolCircle;
-    if (t === "mid")  return d3.symbolSquare;
-    return d3.symbolTriangle;
-  }
-
-  function pathOf(d) {
-    return d3.symbol().type(symbolOf(d)).size(symSize)();
-  }
-
-  // Dots as SVG paths
-  const dots = chartG.selectAll("path.dot").data(data).join("path")
+  // Dots as circles - fixed size
+  const dotR = zoomable ? 5 : 3.5;
+  const dots = chartG.selectAll("circle.dot").data(data).join("circle")
     .attr("class", "dot")
-    .attr("transform", d => `translate(${x(d.tiktokPosts)},${y(d.spotify)})`)
-    .attr("d", d => pathOf(d))
-    .attr("fill", d => colorOf(d))
-    .attr("fill-opacity", 0.65)
+    .attr("cx", d => x(d.tiktokPosts))
+    .attr("cy", d => y(d.spotify))
+    .attr("r", dotR)
+    .attr("fill", "#0aff94")
+    .attr("fill-opacity", 0.45)
     .on("mouseover", function (event, d) {
       d3.select(this).attr("fill-opacity", 1).attr("stroke", "#fff").attr("stroke-width", 1);
       showTooltip(event,
-        `<strong style="color:${colorOf(d)}">${d.track}</strong><br>
+        `<strong style="color:#0aff94">${d.track}</strong><br>
          ${d.artist}<br>
-         <span style="opacity:.7">TikTok Posts: ${siFormat(d.tiktokPosts)}</span><br>
-         <span style="opacity:.7">TikTok Views: ${d.tiktokViews ? siFormat(d.tiktokViews) : "N/A"}</span><br>
          <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
-         <span style="opacity:.7">Popularity: ${d.popularity ?? "N/A"}</span>`
+         <span style="opacity:.7">TikTok Posts: ${siFormat(d.tiktokPosts)}</span>`
       );
     })
     .on("mousemove", moveTooltip)
     .on("mouseleave", function () {
-      d3.select(this).attr("fill-opacity", 0.65).attr("stroke", "none");
+      d3.select(this).attr("fill-opacity", 0.45).attr("stroke", "none");
       hideTooltip();
     });
 
@@ -743,7 +691,7 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
     svg.style("cursor", "grab");
     let zoomEndTimer = null;
     zoomBehaviour = d3.zoom()
-      .scaleExtent([0.8, 40])
+      .scaleExtent([1, 40])
       .translateExtent([[0, 0], [iW, iH]])
       .on("zoom", (event) => {
         svg.style("cursor", event.transform.k > 1 ? "grabbing" : "grab");
@@ -753,10 +701,15 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
         // Drop the filter while panning/zooming for performance
         trendLine.attr("filter", null);
 
-        dots.attr("transform", d => `translate(${xNew(d.tiktokPosts)},${yNew(d.spotify)})`);
+        dots.attr("cx", d => xNew(d.tiktokPosts)).attr("cy", d => yNew(d.spotify));
         renderAxes(xNew, yNew);
         updateTrendLine(xNew, yNew);
         updateTrendLabel(xNew, yNew);
+
+        // Update zoom counter
+        const k = event.transform.k;
+        const zoomEl = document.getElementById("scatter-zoom-level");
+        if (zoomEl) zoomEl.textContent = `${Math.round(k * 100)}%`;
 
         // Restore glow 300ms after interaction stops
         clearTimeout(zoomEndTimer);
@@ -788,18 +741,18 @@ function buildTrendsChart(songs) {
     if (bucket) bucket.songs.push(d);
   });
 
-  // Metrics available for toggle
-  const metrics = {
-    spotify:      { key: "spotify",     label: "Avg Spotify Streams",  color: "#0aff94" },
-    tiktokViews:  { key: "tiktokViews", label: "Avg TikTok Views",     color: "#4a9eff" },
-    tiktokLikes:  { key: "tiktokLikes", label: "Avg TikTok Likes",     color: "#ff8c42" },
+  const subLabels = {
+    "No TikTok": "0 posts",
+    "Low":       "up to 100K posts",
+    "Medium":    "100K - 1M posts",
+    "High":      "1M - 10M posts",
+    "Viral":     "10M+ posts",
   };
-  let activeMetric = "spotify";
 
-  function calcData(metricKey) {
+  function calcData() {
     return bucketDefs.map(b => ({
       label: b.label,
-      avg:   b.songs.length ? d3.mean(b.songs.filter(s => s[metricKey] > 0), s => s[metricKey]) || 0 : 0,
+      avg:   b.songs.length ? d3.mean(b.songs.filter(s => s.spotify > 0), s => s.spotify) || 0 : 0,
       count: b.songs.length,
       songs: b.songs,
     }));
@@ -812,7 +765,7 @@ function buildTrendsChart(songs) {
   const iW = width  - m.left - m.right;
   const iH = height - m.top  - m.bottom;
 
-  // ── Chart header: click hint (left) + metric toggle (right) ──
+  // ── Chart header: click hint only ──
   const chartHeader = document.createElement("div");
   chartHeader.className = "trends-chart-header";
 
@@ -820,18 +773,7 @@ function buildTrendsChart(songs) {
   clickHint.className = "trends-click-hint";
   clickHint.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="vertical-align:middle;margin-right:5px"><circle cx="6" cy="6" r="5.5" stroke="currentColor" stroke-opacity="0.5"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Click a bar to see top songs`;
 
-  const toggleWrap = document.createElement("div");
-  toggleWrap.className = "trends-toggle";
-  Object.entries(metrics).forEach(([key, meta]) => {
-    const btn = document.createElement("button");
-    btn.textContent = meta.label;
-    btn.className = "trends-toggle-btn" + (key === activeMetric ? " active" : "");
-    btn.dataset.metric = key;
-    toggleWrap.appendChild(btn);
-  });
-
   chartHeader.appendChild(clickHint);
-  chartHeader.appendChild(toggleWrap);
   container.appendChild(chartHeader);
 
   const svg = d3.select("#trends-chart").append("svg")
@@ -900,7 +842,7 @@ function buildTrendsChart(songs) {
       .slice(0, 8);
 
     document.getElementById("tlb-overtitle").innerHTML =
-      `Top songs — <strong style="color:#0aff94">${d.label}</strong> TikTok activity`;
+      `Top songs - <strong style="color:#0aff94">${d.label}</strong> TikTok activity`;
     document.getElementById("tlb-list").innerHTML = top.map(s => `
       <li>
         <span class="tlb-track">${s.track}</span>
@@ -913,9 +855,8 @@ function buildTrendsChart(songs) {
     requestAnimationFrame(() => lb.classList.add("visible"));
   }
 
-  function redraw(metricKey, animate) {
-    const data = calcData(metricKey);
-    const meta = metrics[metricKey];
+  function redraw(animate) {
+    const data = calcData();
 
     y.domain([0, d3.max(data, d => d.avg) * 1.15]);
 
@@ -930,32 +871,32 @@ function buildTrendsChart(songs) {
       .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
       .call(ax => ax.selectAll("text").attr("fill", tickFill).attr("font-size", "11px").attr("font-family", "Inter, sans-serif"));
 
-    yLabelG.text(meta.label);
+    yLabelG.text("Avg Spotify Streams");
 
-    // Bars
+    // Bars — High bar is full opacity, others slightly muted
     const bars = barsG.selectAll("rect").data(data).join("rect")
       .attr("x", d => x(d.label))
       .attr("width", x.bandwidth())
       .attr("fill", (_d, i) => barColors[i])
+      .attr("fill-opacity", d => d.label === "High" ? 1 : 0.55)
       .attr("rx", 3)
       .style("cursor", "pointer")
       .on("mouseover", function (event, d) {
-        d3.select(this).attr("opacity", 0.8);
+        d3.select(this).attr("fill-opacity", 1);
         const yPos = y(d.avg);
         crosshair.attr("y1", yPos).attr("y2", yPos).attr("opacity", 1);
-        crosshairLabel
-          .attr("x", -6).attr("y", yPos + 4)
+        crosshairLabel.attr("x", -6).attr("y", yPos + 4)
           .text(siFormat(Math.round(d.avg))).attr("opacity", 1);
         showTooltip(event,
-          `<strong style="color:${meta.color}">${d.label} TikTok activity</strong><br>
-           <span style="opacity:.7">${meta.label}: ${siFormat(Math.round(d.avg))}</span><br>
+          `<strong style="color:#0aff94">${d.label} TikTok activity</strong><br>
+           <span style="opacity:.7">Avg Spotify Streams: ${siFormat(Math.round(d.avg))}</span><br>
            <span style="opacity:.7">Songs in group: ${d.count.toLocaleString()}</span><br>
            <span style="opacity:.6;font-size:11px">Click to see top songs</span>`
         );
       })
       .on("mousemove", moveTooltip)
-      .on("mouseleave", function () {
-        d3.select(this).attr("opacity", 1);
+      .on("mouseleave", function (_, d) {
+        d3.select(this).attr("fill-opacity", d.label === "High" ? 1 : 0.55);
         crosshair.attr("opacity", 0);
         crosshairLabel.attr("opacity", 0);
         hideTooltip();
@@ -968,282 +909,189 @@ function buildTrendsChart(songs) {
         .attr("y", d => y(d.avg))
         .attr("height", d => iH - y(d.avg));
     } else {
-      bars.transition().duration(400).ease(d3.easeCubicOut)
-        .attr("y", d => y(d.avg))
-        .attr("height", d => iH - y(d.avg));
+      bars.attr("y", d => y(d.avg)).attr("height", d => iH - y(d.avg));
     }
 
     // Value labels
     valLabG.selectAll("text").data(data).join("text")
       .attr("x", d => x(d.label) + x.bandwidth() / 2)
       .attr("text-anchor", "middle")
-      .attr("fill", tickFill)
-      .attr("font-size", "11px")
+      .attr("fill", d => d.label === "High" ? "#ffffff" : tickFill)
+      .attr("font-size", d => d.label === "High" ? "13px" : "11px")
+      .attr("font-weight", d => d.label === "High" ? "500" : "300")
       .attr("font-family", "Inter, sans-serif")
-      .transition().duration(400)
       .attr("y", d => y(d.avg) - 8)
       .text(d => siFormat(Math.round(d.avg)));
 
-    // Song count labels below X axis ticks
-    cntLabG.selectAll("text").data(data).join("text")
+    // Sub-labels below tier name — what the tier actually means
+    cntLabG.selectAll(".sub-label").data(data).join("text")
+      .attr("class", "sub-label")
       .attr("x", d => x(d.label) + x.bandwidth() / 2)
-      .attr("y", iH + 46)
+      .attr("y", iH + 44)
       .attr("text-anchor", "middle")
-      .attr("fill", "rgba(255,255,255,0.25)")
-      .attr("font-size", "10px")
+      .attr("fill", "rgba(255,255,255,0.22)")
+      .attr("font-size", "9px")
       .attr("font-family", "Inter, sans-serif")
-      .text(d => `${d.count.toLocaleString()} songs`);
+      .text(d => subLabels[d.label]);
+
+    // Clear any leftover badge from previous draws
+    g.selectAll(".sweet-spot-badge").remove();
   }
 
-  // Initial draw — bars start at 0, animate on scroll into view
-  redraw(activeMetric, false);
+  // Initial draw - bars start at 0, animate on scroll into view
+  redraw(false);
   svg.selectAll("rect").attr("y", iH).attr("height", 0);
 
   const observer = new IntersectionObserver((entries) => {
     if (!entries[0].isIntersecting) return;
     observer.disconnect();
-    redraw(activeMetric, true);
+    redraw(true);
   }, { threshold: 0.2 });
   observer.observe(container);
-
-  // Toggle buttons
-  toggleWrap.addEventListener("click", e => {
-    const btn = e.target.closest(".trends-toggle-btn");
-    if (!btn) return;
-    activeMetric = btn.dataset.metric;
-    toggleWrap.querySelectorAll(".trends-toggle-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    const tlb = document.getElementById("trends-lightbox");
-    tlb.classList.remove("visible");
-    tlb.addEventListener("transitionend", () => tlb.classList.add("hidden"), { once: true });
-    redraw(activeMetric, false);
-  });
 }
 
 // ─── 3. Top Songs: Top 15 by Spotify Streams (horizontal bar) ──────────────
 
 function buildTopSongsChart(songs) {
-  const allData = songs
+  const data = songs
     .filter(d => d.spotify > 0)
     .sort((a, b) => b.spotify - a.spotify)
-    .slice(0, 15);
+    .slice(0, 10);
 
   function tiktokTierColor(d) {
     const p = d.tiktokPosts || 0;
-    if (p === 0)       return "#3a4256";
-    if (p <= 100000)   return "#2a6e5a";
-    if (p <= 1000000)  return "#1a9e72";
-    if (p <= 10000000) return "#0adf88";
-    return "#ffffff";
+    if (p === 0)       return "#111118"; // No TikTok — near black
+    if (p <= 100000)   return "#444455"; // Low — dark grey
+    if (p <= 1000000)  return "#888899"; // Medium — mid grey
+    if (p <= 10000000) return "#ccccdd"; // High — light grey
+    return "#ffffff";                    // Viral — white
   }
 
   function tiktokTierLabel(d) {
     const p = d.tiktokPosts || 0;
     if (p === 0)       return "No TikTok";
-    if (p <= 100000)   return "Low";
-    if (p <= 1000000)  return "Medium";
-    if (p <= 10000000) return "High";
-    return "Viral";
-  }
-
-  function tiktokTierKey(d) {
-    const p = d.tiktokPosts || 0;
-    if (p === 0)       return "none";
-    if (p <= 100000)   return "low";
-    if (p <= 1000000)  return "medium";
-    if (p <= 10000000) return "high";
-    return "viral";
+    if (p <= 100000)   return "Low TikTok";
+    if (p <= 1000000)  return "Medium TikTok";
+    if (p <= 10000000) return "High TikTok";
+    return "Viral on TikTok";
   }
 
   const container = document.getElementById("top-songs-chart");
-  const width  = container.clientWidth || window.innerWidth;
-  const height = Math.round(width * 0.52);
-  const m = { top: 24, right: 0, bottom: 56, left: 0 };
-  const iW = width;
-  const iH = height - m.top - m.bottom;
+  const totalW   = container.clientWidth || window.innerWidth;
+  const mT = 24, mB = 60;
+  const chartH   = 340;
+  const totalH   = chartH + mT + mB;
 
-  // ── Sort toggle ──
-  const sortWrap = document.createElement("div");
-  sortWrap.className = "ts-sort-wrap";
-  sortWrap.innerHTML = `
-    <span class="ts-sort-label">Sort by</span>
-    <button class="ts-sort-btn active" data-sort="streams">Streams</button>
-    <button class="ts-sort-btn" data-sort="tiktok">TikTok Activity</button>`;
-  container.parentElement.insertBefore(sortWrap, container);
+  const barW     = totalW / data.length;
+  const barGap   = Math.max(2, barW * 0.12);
+  const colW     = barW - barGap;
 
-  let activeSort  = "streams";
-  let activeTier  = "all";
-  let hasAnimated = false;
+  const maxVal   = d3.max(data, d => d.spotify);
+  const yScale   = d3.scaleLinear().domain([0, maxVal]).range([chartH, 0]);
 
   const svg = d3.select("#top-songs-chart").append("svg")
-    .attr("width", width).attr("height", height)
-    .style("display", "block");
+    .attr("width", totalW)
+    .attr("height", totalH);
 
-  const g = svg.append("g").attr("transform", `translate(0,${m.top})`);
+  const g = svg.append("g").attr("transform", `translate(0,${mT})`);
 
-  const x = d3.scaleBand().range([0, iW]).padding(0.08);
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(allData, d => d.spotify) * 1.1])
-    .range([iH, 0]);
+  const cols = g.selectAll(".ts-col")
+    .data(data)
+    .join("g")
+    .attr("class", "ts-col")
+    .attr("transform", (_d, i) => `translate(${i * barW}, 0)`);
 
-  const tickFill   = "rgba(0,0,0,0.45)";
-  const axisStroke = "rgba(0,0,0,0.15)";
+  // Bar background column (full height, very subtle)
+  cols.append("rect")
+    .attr("x", barGap / 2).attr("y", 0)
+    .attr("width", colW).attr("height", chartH)
+    .attr("fill", "rgba(255,255,255,0.03)")
+    .attr("rx", 3);
 
-  // Grid
-  g.append("g")
-    .call(d3.axisLeft(y).ticks(4).tickSize(-iW).tickFormat(""))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("line").attr("stroke", "rgba(0,0,0,0.08)"));
-
-  // Y axis label
-  g.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -iH / 2).attr("y", 14)
-    .attr("text-anchor", "middle")
-    .attr("fill", tickFill)
-    .attr("font-size", "11px")
-    .attr("font-family", "Inter, sans-serif")
-    .text("Spotify Streams");
-
-  const barsG    = g.append("g");
-  const valLabG  = g.append("g");
-  const xAxisG   = g.append("g").attr("transform", `translate(0,${iH})`);
-
-  function getSortedData() {
-    return [...allData].sort((a, b) =>
-      activeSort === "streams"
-        ? b.spotify - a.spotify
-        : (b.tiktokPosts || 0) - (a.tiktokPosts || 0)
-    );
-  }
-
-  function redraw(animate) {
-    const data = getSortedData();
-    x.domain(data.map(d => d.track));
-
-    // X axis song labels
-    xAxisG.call(d3.axisBottom(x).tickSize(3))
-      .call(ax => ax.select(".domain").attr("stroke", axisStroke))
-      .call(ax => ax.selectAll("line").attr("stroke", axisStroke))
-      .call(ax => ax.selectAll("text")
-        .attr("fill", tickFill)
-        .attr("font-size", "10px")
-        .attr("font-family", "Inter, sans-serif")
-        .attr("dy", "1.2em")
-        .text(d => truncate(d, 14)));
-
-    // Bars
-    const bars = barsG.selectAll("rect.ts-bar").data(data, d => d.track).join(
-      enter => enter.append("rect").attr("class", "ts-bar")
-        .attr("y", iH).attr("height", 0)
-        .attr("rx", 3),
-      update => update,
-      exit => exit.remove()
-    )
-      .attr("width", x.bandwidth())
-      .attr("fill", d => tiktokTierColor(d))
-      .on("mouseover", function (_event, d) {
-        // Dim all others
-        barsG.selectAll("rect.ts-bar").attr("fill-opacity", b => b.track === d.track ? 1 : 0.25);
-        valLabG.selectAll("text.ts-val").attr("opacity", b => b.track === d.track ? 1 : 0.2);
-        showTooltip(_event,
-          `<strong style="color:#0aff94">${d.track}</strong><br>
-           ${d.artist}<br>
-           <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
-           <span style="opacity:.7">TikTok Posts: ${d.tiktokPosts ? siFormat(d.tiktokPosts) : "None"}</span><br>
-           <span style="opacity:.7">TikTok Tier: ${tiktokTierLabel(d)}</span>`
-        );
-      })
-      .on("mousemove", moveTooltip)
-      .on("mouseleave", function () {
-        applyTierFilter();
-        hideTooltip();
-      });
-
-    if (animate) {
-      bars.transition().duration(600).ease(d3.easeCubicOut)
-        .attr("x", d => x(d.track))
-        .attr("y", d => y(d.spotify))
-        .attr("height", d => iH - y(d.spotify));
-    } else {
-      bars.attr("x", d => x(d.track))
-        .attr("y", iH).attr("height", 0)
-        .transition().delay((_d, i) => i * 55).duration(650).ease(d3.easeCubicOut)
-        .attr("y", d => y(d.spotify))
-        .attr("height", d => iH - y(d.spotify));
-    }
-
-    // Value labels
-    const vals = valLabG.selectAll("text.ts-val").data(data, d => d.track).join(
-      enter => enter.append("text").attr("class", "ts-val")
-        .attr("y", iH + 20).attr("opacity", 0),
-      update => update,
-      exit => exit.remove()
-    )
-      .attr("text-anchor", "middle")
-      .attr("fill", tickFill)
-      .attr("font-size", "10px")
-      .attr("font-family", "Inter, sans-serif")
-      .text(d => siFormat(d.spotify));
-
-    if (animate) {
-      vals.transition().duration(600).ease(d3.easeCubicOut)
-        .attr("x", d => x(d.track) + x.bandwidth() / 2)
-        .attr("y", d => y(d.spotify) - 6)
-        .attr("opacity", 1);
-    } else {
-      vals.attr("x", d => x(d.track) + x.bandwidth() / 2)
-        .transition().delay((_d, i) => i * 55 + 550).duration(300)
-        .attr("y", d => y(d.spotify) - 6)
-        .attr("opacity", 1);
-    }
-  }
-
-  function applyTierFilter() {
-    barsG.selectAll("rect.ts-bar").attr("fill-opacity", d =>
-      activeTier === "all" || tiktokTierKey(d) === activeTier ? 0.82 : 0.15
-    );
-    valLabG.selectAll("text.ts-val").attr("opacity", d =>
-      activeTier === "all" || tiktokTierKey(d) === activeTier ? 1 : 0.2
-    );
-  }
-
-  // ── Legend click → tier filter ──
-  const section = document.getElementById("top-songs");
-  section.querySelectorAll(".ts-legend-item").forEach(item => {
-    item.style.cursor = "pointer";
-    item.addEventListener("click", () => {
-      const tier = item.dataset.tier;
-      activeTier = activeTier === tier ? "all" : tier;
-      section.querySelectorAll(".ts-legend-item").forEach(el =>
-        el.classList.toggle("ts-legend-active", el.dataset.tier === activeTier)
+  // Bars — start at height 0, grow up on scroll
+  cols.append("rect")
+    .attr("class", "ts-bar")
+    .attr("x", barGap / 2)
+    .attr("y", chartH)
+    .attr("width", colW)
+    .attr("height", 0)
+    .attr("fill", d => tiktokTierColor(d))
+    .attr("fill-opacity", 0.88)
+    .attr("rx", 3)
+    .on("mouseover", function (event, d) {
+      d3.select(this).attr("fill-opacity", 1);
+      showTooltip(event,
+        `<strong style="color:#0aff94">${d.track}</strong><br>
+         ${d.artist}<br>
+         <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
+         <span style="opacity:.7">TikTok Posts: ${d.tiktokPosts ? siFormat(d.tiktokPosts) : "None"}</span><br>
+         <span style="opacity:.7">TikTok Activity: ${tiktokTierLabel(d)}</span>`
       );
-      applyTierFilter();
+    })
+    .on("mousemove", moveTooltip)
+    .on("mouseleave", function () {
+      d3.select(this).attr("fill-opacity", 0.88);
+      hideTooltip();
     });
-  });
 
-  // ── Sort toggle ──
-  sortWrap.addEventListener("click", e => {
-    const btn = e.target.closest(".ts-sort-btn");
-    if (!btn) return;
-    activeSort = btn.dataset.sort;
-    sortWrap.querySelectorAll(".ts-sort-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    redraw(true);
-  });
+  // Stream count above bar
+  cols.append("text")
+    .attr("class", "ts-val")
+    .attr("x", barGap / 2 + colW / 2)
+    .attr("y", chartH)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "auto")
+    .attr("fill", "rgba(0,0,0,0)")
+    .attr("font-size", "10px")
+    .attr("font-weight", "500")
+    .attr("font-family", "Inter, sans-serif")
+    .text(d => siFormat(d.spotify));
 
-  // ── Scroll entrance animation (once) ──
-  const observer = new IntersectionObserver((entries) => {
-    if (!entries[0].isIntersecting || hasAnimated) return;
-    hasAnimated = true;
-    observer.disconnect();
-    redraw(false);
-  }, { threshold: 0.15 });
+  // Track name label — straight, centered under bar
+  const labelX = barGap / 2 + colW / 2;
+  const maxChars = Math.max(6, Math.floor(colW / 6.5));
+  cols.append("text")
+    .attr("x", labelX)
+    .attr("y", chartH + 16)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(0,0,0,0.7)")
+    .attr("font-size", "11px")
+    .attr("font-weight", "500")
+    .attr("font-family", "Inter, sans-serif")
+    .text(d => truncate(d.track, maxChars))
+    .append("title").text(d => d.track);
 
+  // Artist label — straight, centered under track name
+  cols.append("text")
+    .attr("x", labelX)
+    .attr("y", chartH + 31)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "rgba(0,0,0,0.42)")
+    .attr("font-size", "10px")
+    .attr("font-family", "Inter, sans-serif")
+    .text(d => truncate(d.artist, maxChars));
+
+  // Entrance animation
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      cols.selectAll(".ts-bar")
+        .transition().delay((_d, i) => i * 45).duration(700).ease(d3.easeCubicOut)
+        .attr("y", d => yScale(d.spotify))
+        .attr("height", d => chartH - yScale(d.spotify));
+      cols.selectAll(".ts-val")
+        .transition().delay((_d, i) => i * 45 + 650).duration(250)
+        .attr("y", d => yScale(d.spotify) - 5)
+        .attr("fill", "rgba(0,0,0,0.55)");
+    }
+  }, { threshold: 0.1 });
   observer.observe(container);
 }
 
-// ─── 4. Artists: Top 10 — dual horizontal bars with legend & rank ────────────
+// ─── 4. Artists: Top 10 - dual horizontal bars with legend & rank ────────────
 
 function buildArtistsChart(songs) {
   const byArtist = d3.rollups(
@@ -1389,7 +1237,7 @@ function buildArtistsChart(songs) {
     .attr("width", 0).attr("height", barH)
     .attr("fill", "#0aff94").attr("fill-opacity", 0.85);
 
-  // Value label — Spotify
+  // Value label - Spotify
   groups.append("text")
     .attr("class", "val-spotify")
     .attr("x", d => labelW + xS(d.spotify) - 8)
@@ -1400,7 +1248,7 @@ function buildArtistsChart(songs) {
     .attr("pointer-events", "none").attr("opacity", 0)
     .text(d => xS(d.spotify) > 70 ? siFormat(d.spotify) : "");
 
-  // Value label — TikTok
+  // Value label - TikTok
   groups.append("text")
     .attr("class", "val-tiktok")
     .attr("x", d => labelW + xT(d.tiktok) - 8)
@@ -1565,19 +1413,19 @@ function buildOutlierBar(containerId, data, valueKey, axisLabel) {
     .attr("opacity", 0)
     .text(d => siFormat(d[valueKey]));
 
-  // Caption above the chart — one-line stat about the top entry
+  // Caption above the chart - one-line stat about the top entry
   if (data.length > 0) {
     const top = data[0];
     const captionText = valueKey === "tiktokViews"
-      ? `Top entry: ${siFormat(top.tiktokViews)} TikTok views — only ${siFormat(top.spotify)} Spotify streams`
-      : `Top entry: ${siFormat(top.spotify)} Spotify streams — zero TikTok posts`;
+      ? `Top entry: ${siFormat(top.tiktokViews)} TikTok views - only ${siFormat(top.spotify)} Spotify streams`
+      : `Top entry: ${siFormat(top.spotify)} Spotify streams - zero TikTok posts`;
     const caption = document.createElement("p");
     caption.className = "outlier-chart-caption";
     caption.textContent = captionText;
     container.insertBefore(caption, container.firstChild);
   }
 
-  // Y axis — track names
+  // Y axis - track names
   g.append("g")
     .call(d3.axisLeft(y).tickSize(0))
     .call(ax => ax.select(".domain").remove())
@@ -1654,15 +1502,15 @@ function buildSuccessSection(songs) {
   document.getElementById("success-stats").innerHTML = `
     <div class="success-stat">
       <span class="stat-number">${multiplier}×</span>
-      <span class="stat-label">more streams at the sweet spot than with zero TikTok presence</span>
+      <span class="stat-label">more streams for high TikTok activity songs compared to songs with no TikTok at all</span>
     </div>
     <div class="success-stat">
       <span class="stat-number">${dropPct}%</span>
-      <span class="stat-label">fewer streams for viral songs vs. high-activity songs — virality backfires</span>
+      <span class="stat-label">drop in streams once a song crosses into full virality</span>
     </div>
     <div class="success-stat">
       <span class="stat-number">${siFormat(highAvg)}</span>
-      <span class="stat-label">average streams at the peak — the chart answers the question</span>
+      <span class="stat-label">average streams at the peak - beyond that, more TikTok means fewer streams</span>
     </div>`;
 
   // Line + Area chart
@@ -1700,7 +1548,7 @@ function buildSuccessSection(songs) {
   grad.append("stop").attr("offset", "100%")
     .attr("stop-color", "#0adf88").attr("stop-opacity", 0.02);
 
-  // Clip path — expands left-to-right during entrance animation
+  // Clip path - expands left-to-right during entrance animation
   defs.append("clipPath").attr("id", "success-clip")
     .append("rect")
     .attr("x", 0).attr("y", -margin.top)
@@ -1791,20 +1639,6 @@ function buildSuccessSection(songs) {
     .attr("font-weight", d => d.label === "High" ? "500" : "300")
     .text(d => siFormat(d.avg));
 
-  // "sweet spot" annotation above the High peak
-  const highB = buckets[3];
-  const annG = g.append("g")
-    .attr("class", "s-annotation")
-    .attr("transform", `translate(${xScale(highB.label)},${yScale(highB.avg) - 38})`)
-    .attr("opacity", 0);
-
-  annG.append("text")
-    .attr("text-anchor", "middle")
-    .attr("fill", "#0aff94")
-    .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", "10px")
-    .attr("font-style", "italic")
-    .text("sweet spot ↑");
 
   // Axis caption
   svg.append("text")
@@ -1830,8 +1664,6 @@ function buildSuccessSection(songs) {
           .transition().delay(400 + i * 150).duration(350)
           .attr("opacity", 1);
       });
-      // Annotation last
-      annG.transition().delay(1500).duration(400).attr("opacity", 1);
     }
   }, { threshold: 0.2 });
   observer.observe(container);
