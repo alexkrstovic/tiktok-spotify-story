@@ -438,13 +438,16 @@ h2 {
   max-width: 720px;
 }
 
-.section-top-songs .section-overtitle {
+.section-top-songs p.section-overtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 300;
   color: rgba(0,0,0,0.5);
 }
 
-.section-top-songs h2 {
+.section-top-songs .top-songs-text h2 {
   font-family: 'Host Grotesk', 'Inter', sans-serif;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 35px;
   color: #1e1e1e;
   margin-top: 8px;
@@ -491,6 +494,55 @@ h2 {
   width: calc(100% - 80px);
   margin: 0 40px;
   display: block;
+}
+
+.top-songs-legend {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.tsl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(0,0,0,0.55);
+}
+
+.tsl-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tsl-bar {
+  width: 12px;
+  height: 12px;
+  background: #001409;
+  border-radius: 2px;
+}
+
+.tsl-line {
+  width: 22px;
+  height: 3px;
+  background: #007A33;
+  border-radius: 2px;
+  position: relative;
+}
+
+.tsl-line::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #007A33;
+  border: 1.5px solid #0aff94;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .ts-legend-item {
@@ -1255,7 +1307,7 @@ h2 {
 .tlb-list li {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -1267,7 +1319,7 @@ h2 {
   font-size: 13px;
   font-weight: 400;
   color: rgba(255,255,255,0.85);
-  flex: 1;
+  flex: 2;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -1284,6 +1336,7 @@ h2 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: right;
 }
 
 .tlb-streams {
@@ -1292,6 +1345,8 @@ h2 {
   font-weight: 500;
   color: #0aff94;
   white-space: nowrap;
+  text-align: right;
+  min-width: 52px;
 }
 
 /* ─── Footer ─── */

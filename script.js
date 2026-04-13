@@ -848,7 +848,7 @@ function buildTrendsChart(songs) {
       .slice(0, 8);
 
     document.getElementById("tlb-overtitle").innerHTML =
-      `Top songs - <strong style="color:#0aff94">${d.label}</strong> TikTok activity`;
+      `Top songs - <strong style="color:#0aff94">${d.label === "No TikTok" ? "No TikTok activity" : d.label + " TikTok activity"}</strong>`;
     document.getElementById("tlb-list").innerHTML = top.map(s => `
       <li>
         <span class="tlb-track">${s.track}</span>
@@ -894,7 +894,7 @@ function buildTrendsChart(songs) {
         crosshairLabel.attr("x", -6).attr("y", yPos + 4)
           .text(siFormat(Math.round(d.avg))).attr("opacity", 1);
         showTooltip(event,
-          `<strong style="color:#0aff94">${d.label} TikTok activity</strong><br>
+          `<strong style="color:#0aff94">${d.label === "No TikTok" ? "No TikTok activity" : d.label + " TikTok activity"}</strong><br>
            <span style="opacity:.7">Avg Spotify Streams: ${siFormat(Math.round(d.avg))}</span><br>
            <span style="opacity:.7">Songs in group: ${d.count.toLocaleString()}</span><br>
            <span style="opacity:.6;font-size:11px">Click to see top songs</span>`
@@ -935,8 +935,8 @@ function buildTrendsChart(songs) {
       .attr("x", d => x(d.label) + x.bandwidth() / 2)
       .attr("y", iH + 44)
       .attr("text-anchor", "middle")
-      .attr("fill", "rgba(255,255,255,0.22)")
-      .attr("font-size", "9px")
+      .attr("fill", "rgba(255,255,255,0.45)")
+      .attr("font-size", "10px")
       .attr("font-family", "Inter, sans-serif")
       .text(d => subLabels[d.label]);
 
@@ -962,22 +962,21 @@ function buildTrendsChart(songs) {
 
 function buildNostalgiaChart(songs) {
   const TIKTOK_LAUNCH = 2018;
-  const MIN_VIEWS = 500_000_000; // 500M minimum to keep chart readable
+  const MIN_VIEWS = 500_000_000;
 
   const data = songs
     .filter(d => d.tiktokViews >= MIN_VIEWS && d.releaseYear && d.releaseYear >= 1985 && d.releaseYear <= 2024)
     .sort((a, b) => b.tiktokViews - a.tiktokViews);
 
-  // Top pre-TikTok songs to label
   const toLabel = data
     .filter(d => d.releaseYear < TIKTOK_LAUNCH)
     .slice(0, 5);
 
   const container = document.getElementById("nostalgia-chart");
-  const totalW = container.clientWidth || 520;
-  const margin = { top: 20, right: 20, bottom: 48, left: 20 };
+  const totalW = container.getBoundingClientRect().width || 520;
+  const margin = { top: 24, right: 20, bottom: 56, left: 68 };
   const chartW = totalW - margin.left - margin.right;
-  const chartH = 300;
+  const chartH = Math.round(chartW * 0.62);
   const totalH = chartH + margin.top + margin.bottom;
 
   const xScale = d3.scaleLinear()
@@ -985,25 +984,63 @@ function buildNostalgiaChart(songs) {
     .range([0, chartW]);
 
   const yScale = d3.scaleLog()
-    .domain([MIN_VIEWS * 0.8, d3.max(data, d => d.tiktokViews) * 1.3])
+    .domain([MIN_VIEWS * 0.8, d3.max(data, d => d.tiktokViews) * 1.4])
     .range([chartH, 0]);
 
+  const tickFill   = "rgba(255,255,255,0.35)";
+  const gridStroke = "rgba(255,255,255,0.05)";
+
   const svg = d3.select("#nostalgia-chart").append("svg")
-    .attr("width", totalW).attr("height", totalH);
+    .attr("width", totalW).attr("height", totalH)
+    .style("overflow", "visible");
 
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Y gridlines
+  const yTicks = [5e8, 1e9, 5e9, 1e10, 5e10, 1e11];
+  g.selectAll(".n-grid")
+    .data(yTicks)
+    .join("line")
+    .attr("class", "n-grid")
+    .attr("x1", 0).attr("x2", chartW)
+    .attr("y1", d => yScale(d)).attr("y2", d => yScale(d))
+    .attr("stroke", gridStroke).attr("stroke-width", 1);
+
+  // Y axis
+  g.append("g")
+    .call(d3.axisLeft(yScale)
+      .tickValues(yTicks)
+      .tickFormat(siFormat)
+      .tickSize(0))
+    .call(ax => ax.select(".domain").remove())
+    .call(ax => ax.selectAll("text")
+      .attr("fill", tickFill)
+      .attr("font-size", "11px")
+      .attr("font-family", "Inter, sans-serif")
+      .attr("dx", "-6"));
+
+  // Y axis label
+  svg.append("text")
+    .attr("transform", `rotate(-90)`)
+    .attr("x", -(margin.top + chartH / 2))
+    .attr("y", 14)
+    .attr("text-anchor", "middle")
+    .attr("fill", tickFill)
+    .attr("font-size", "11px")
+    .attr("font-family", "Inter, sans-serif")
+    .text("TikTok Views");
 
   // TikTok launch reference line
   g.append("line")
     .attr("x1", xScale(TIKTOK_LAUNCH)).attr("x2", xScale(TIKTOK_LAUNCH))
     .attr("y1", 0).attr("y2", chartH)
-    .attr("stroke", "rgba(255,255,255,0.15)")
+    .attr("stroke", "rgba(255,255,255,0.18)")
     .attr("stroke-width", 1)
     .attr("stroke-dasharray", "4,4");
 
   g.append("text")
-    .attr("x", xScale(TIKTOK_LAUNCH) + 6).attr("y", 12)
-    .attr("fill", "rgba(255,255,255,0.25)")
+    .attr("x", xScale(TIKTOK_LAUNCH) + 6).attr("y", 14)
+    .attr("fill", "rgba(255,255,255,0.28)")
     .attr("font-size", "10px")
     .attr("font-family", "Inter, sans-serif")
     .text("TikTok launches");
@@ -1016,15 +1053,17 @@ function buildNostalgiaChart(songs) {
     .attr("cx", d => xScale(d.releaseYear))
     .attr("cy", d => yScale(d.tiktokViews))
     .attr("r", 5)
-    .attr("fill", d => d.releaseYear < TIKTOK_LAUNCH ? "#0aff94" : "rgba(255,255,255,0.18)")
+    .attr("fill", d => d.releaseYear < TIKTOK_LAUNCH ? "#0aff94" : "rgba(255,255,255,0.15)")
+    .attr("fill-opacity", d => d.releaseYear < TIKTOK_LAUNCH ? 0.85 : 1)
     .attr("opacity", 0)
+    .style("cursor", "pointer")
     .on("mouseover", function(event, d) {
       d3.select(this).attr("r", 7);
       showTooltip(event,
         `<strong style="color:#0aff94">${d.track}</strong><br>
-         ${d.artist}<br>
-         <span style="opacity:.7">Released: ${d.releaseYear}</span><br>
-         <span style="opacity:.7">TikTok Views: ${siFormat(d.tiktokViews)}</span>`
+         <span style="opacity:.7">${d.artist}</span><br>
+         <span style="opacity:.6">Released: ${d.releaseYear}</span><br>
+         <span style="opacity:.6">TikTok Views: ${siFormat(d.tiktokViews)}</span>`
       );
     })
     .on("mousemove", moveTooltip)
@@ -1033,40 +1072,52 @@ function buildNostalgiaChart(songs) {
       hideTooltip();
     });
 
-  // Labels for top pre-TikTok songs
+  // Labels for top pre-TikTok songs — collision-aware vertical offset
+  const labelH = 13;
+  const placed = [];
   toLabel.forEach(d => {
+    let cy = yScale(d.tiktokViews) - 12;
+    // nudge down if it would overlap a previously placed label
+    placed.forEach(p => {
+      if (Math.abs(xScale(d.releaseYear) - p.x) < 80 && Math.abs(cy - p.y) < labelH) {
+        cy = p.y + labelH + 2;
+      }
+    });
+    placed.push({ x: xScale(d.releaseYear), y: cy });
+
     g.append("text")
+      .attr("class", "n-label")
       .attr("x", xScale(d.releaseYear))
-      .attr("y", yScale(d.tiktokViews) - 10)
+      .attr("y", cy)
       .attr("text-anchor", "middle")
-      .attr("fill", "rgba(255,255,255,0.6)")
+      .attr("fill", "rgba(255,255,255,0.65)")
       .attr("font-size", "10px")
       .attr("font-family", "Inter, sans-serif")
       .attr("opacity", 0)
-      .attr("class", "n-label")
-      .text(truncate(d.track, 20));
+      .text(truncate(d.track, 22));
   });
 
-  // X axis — year ticks
+  // X axis
   g.append("g").attr("transform", `translate(0,${chartH})`)
     .call(d3.axisBottom(xScale).tickFormat(d3.format("d")).ticks(8).tickSize(0))
     .call(ax => ax.select(".domain").attr("stroke", "rgba(255,255,255,0.1)"))
     .call(ax => ax.selectAll("text")
-      .attr("fill", "rgba(255,255,255,0.35)")
+      .attr("fill", tickFill)
       .attr("font-size", "11px")
       .attr("font-family", "Inter, sans-serif")
-      .attr("dy", "1.2em"));
+      .attr("dy", "1.3em"));
 
-  // Legend
-  const leg = svg.append("g").attr("transform", `translate(${margin.left}, ${totalH - 12})`);
-  leg.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 4).attr("fill", "#0aff94");
-  leg.append("text").attr("x", 10).attr("y", 0).attr("dominant-baseline", "middle")
+  // Legend — sits just below x axis
+  const legY = totalH - 10;
+  const legG = svg.append("g").attr("transform", `translate(${margin.left}, ${legY})`);
+  legG.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 4).attr("fill", "#0aff94").attr("fill-opacity", 0.85);
+  legG.append("text").attr("x", 10).attr("y", 0).attr("dominant-baseline", "middle")
     .attr("fill", "rgba(255,255,255,0.4)").attr("font-size", "10px").attr("font-family", "Inter, sans-serif")
-    .text("Released before TikTok");
-  leg.append("circle").attr("cx", 155).attr("cy", 0).attr("r", 4).attr("fill", "rgba(255,255,255,0.25)");
-  leg.append("text").attr("x", 165).attr("y", 0).attr("dominant-baseline", "middle")
+    .text("Released before TikTok (2018)");
+  legG.append("circle").attr("cx", 185).attr("cy", 0).attr("r", 4).attr("fill", "rgba(255,255,255,0.2)");
+  legG.append("text").attr("x", 195).attr("y", 0).attr("dominant-baseline", "middle")
     .attr("fill", "rgba(255,255,255,0.4)").attr("font-size", "10px").attr("font-family", "Inter, sans-serif")
-    .text("Released after TikTok");
+    .text("Released after");
 
   // Entrance animation
   let animated = false;
@@ -1074,10 +1125,10 @@ function buildNostalgiaChart(songs) {
     if (entries[0].isIntersecting && !animated) {
       animated = true;
       g.selectAll(".n-dot")
-        .transition().delay((_d, i) => i * 8).duration(400).ease(d3.easeCubicOut)
+        .transition().delay((_d, i) => i * 8).duration(450).ease(d3.easeCubicOut)
         .attr("opacity", 1);
       g.selectAll(".n-label")
-        .transition().delay(400).duration(400)
+        .transition().delay(500).duration(400)
         .attr("opacity", 1);
     }
   }, { threshold: 0.2 });
@@ -1094,7 +1145,7 @@ function buildTopSongsChart(songs) {
 
   const container = document.getElementById("top-songs-chart");
   const totalW = container.getBoundingClientRect().width || (window.innerWidth - 80);
-  const margin = { top: 20, right: 60, bottom: 80, left: 60 };
+  const margin = { top: 20, right: 60, bottom: 72, left: 60 };
   const chartW = totalW - margin.left - margin.right;
   const chartH = 320;
   const totalH = chartH + margin.top + margin.bottom;
@@ -1203,7 +1254,7 @@ function buildTopSongsChart(songs) {
   svg.append("text")
     .attr("transform", `translate(14, ${margin.top + chartH / 2}) rotate(-90)`)
     .attr("text-anchor", "middle")
-    .attr("fill", "rgba(0,0,0,0.4)").attr("font-size", "10px")
+    .attr("fill", "rgba(0,0,0,0.55)").attr("font-size", "11px")
     .attr("font-family", "Inter, sans-serif")
     .text("Spotify Streams");
 
@@ -1220,7 +1271,7 @@ function buildTopSongsChart(songs) {
   svg.append("text")
     .attr("transform", `translate(${totalW - 14}, ${margin.top + chartH / 2}) rotate(90)`)
     .attr("text-anchor", "middle")
-    .attr("fill", "rgba(0,0,0,0.4)").attr("font-size", "10px")
+    .attr("fill", "rgba(0,0,0,0.55)").attr("font-size", "11px")
     .attr("font-family", "Inter, sans-serif")
     .text("TikTok Views");
 
@@ -1229,31 +1280,41 @@ function buildTopSongsChart(songs) {
     .attr("transform", `translate(0,${chartH})`)
     .call(d3.axisBottom(xScale).tickSize(0))
     .call(ax => ax.select(".domain").attr("stroke", "rgba(0,0,0,0.15)"))
-    .call(ax => ax.selectAll("text")
-      .attr("fill", "rgba(0,0,0,0.6)").attr("font-size", "10px")
-      .attr("font-family", "Inter, sans-serif")
-      .attr("text-anchor", "end")
-      .attr("transform", "rotate(-38) translate(-6, 0)")
-      .text(d => truncate(d, 18)));
+    .call(ax => ax.selectAll("text").remove())
+    .call(ax => {
+      const bw = xScale.bandwidth();
+      data.forEach(d => {
+        const words = d.track.split(" ");
+        // split into two roughly equal lines at the nearest space to the midpoint
+        let best = 0, bestDiff = Infinity;
+        let running = 0;
+        const total = d.track.length;
+        words.forEach((w, i) => {
+          running += (i === 0 ? 0 : 1) + w.length;
+          const diff = Math.abs(running - total / 2);
+          if (diff < bestDiff) { bestDiff = diff; best = i + 1; }
+        });
+        const line1 = words.slice(0, best).join(" ");
+        const line2 = words.slice(best).join(" ");
 
-  // Legend
-  const leg = svg.append("g")
-    .attr("transform", `translate(${margin.left}, ${totalH - 14})`);
-  leg.append("rect").attr("x", 0).attr("y", -5)
-    .attr("width", 12).attr("height", 12).attr("rx", 2).attr("fill", "#001409");
-  leg.append("text").attr("x", 16).attr("y", 1)
-    .attr("dominant-baseline", "middle")
-    .attr("fill", "rgba(0,0,0,0.5)").attr("font-size", "10px")
-    .attr("font-family", "Inter, sans-serif").text("Spotify Streams");
-  leg.append("line").attr("x1", 120).attr("x2", 134)
-    .attr("y1", 1).attr("y2", 1)
-    .attr("stroke", "#007A33").attr("stroke-width", 2.5);
-  leg.append("circle").attr("cx", 127).attr("cy", 1)
-    .attr("r", 4).attr("fill", "#007A33").attr("stroke", "#0aff94").attr("stroke-width", 1.5);
-  leg.append("text").attr("x", 140).attr("y", 1)
-    .attr("dominant-baseline", "middle")
-    .attr("fill", "rgba(0,0,0,0.5)").attr("font-size", "10px")
-    .attr("font-family", "Inter, sans-serif").text("TikTok Views");
+        const xPos = xScale(d.track) + bw / 2;
+        const textEl = ax.append("text")
+          .attr("x", xPos).attr("y", 0)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(0,0,0,0.6)")
+          .attr("font-size", "9px")
+          .attr("font-family", "Inter, sans-serif");
+
+        textEl.append("tspan")
+          .attr("x", xPos).attr("dy", "1.8em")
+          .text(line1);
+        if (line2) {
+          textEl.append("tspan")
+            .attr("x", xPos).attr("dy", "1.1em")
+            .text(line2);
+        }
+      });
+    });
 
   // Entrance animation
   let animated = false;
