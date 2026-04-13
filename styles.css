@@ -488,7 +488,8 @@ h2 {
 }
 
 #top-songs-chart {
-  width: 100%;
+  width: calc(100% - 80px);
+  margin: 0 40px;
   display: block;
 }
 
