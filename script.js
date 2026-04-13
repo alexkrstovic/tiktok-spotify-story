@@ -227,10 +227,10 @@ d3.csv("data/songs.csv").then(function (raw) {
     ).values()
   );
 
-  // Drop songs whose title or artist contains encoding artifacts (Unicode replacement character)
-  const songs = deduped.filter(d =>
-    !d.track.includes('\uFFFD') && !d.artist.includes('\uFFFD')
-  );
+  // Drop songs whose title or artist contains encoding artifacts
+  // Catches both U+FFFD (replacement char) and runs of U+00FD (ý) from latin-1 misread as UTF-8
+  const isGarbled = str => str.includes('\uFFFD') || (str.match(/\u00fd/g) || []).length > 2;
+  const songs = deduped.filter(d => !isGarbled(d.track) && !isGarbled(d.artist));
 
   buildScatterplot(songs);
   buildTrendsChart(songs);
