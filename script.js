@@ -1489,10 +1489,7 @@ function buildSuccessSection(songs) {
       <span class="stat-number">${dropPct}%</span>
       <span class="stat-label">drop in streams once a song crosses into full virality</span>
     </div>
-    <div class="success-stat">
-      <span class="stat-number">${siFormat(highAvg)}</span>
-      <span class="stat-label">average streams at the peak - beyond that, more TikTok means fewer streams</span>
-    </div>`;
+`;
 
   // Line + Area chart
   const container = document.getElementById("success-chart");

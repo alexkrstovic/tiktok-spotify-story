@@ -664,7 +664,7 @@ h2 {
 
 .success-stat {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 16px;
   border-left: 2px solid rgba(10,255,148,0.3);
   padding-left: 16px;
