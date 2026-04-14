@@ -28,6 +28,11 @@ a {
 }
 
 /* ─── Typography ─── */
+p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
 h1, h2 {
   font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-weight: 700;
@@ -242,7 +247,6 @@ h2 {
   font-weight: 300;
   color: rgba(255,255,255,0.7);
   line-height: 1.65;
-  margin-bottom: 14px;
 }
 
 .bp-note {
@@ -439,15 +443,15 @@ h2 {
 }
 
 .section-top-songs p.section-overtitle {
-  font-family: 'Inter', sans-serif;
-  font-size: 18px;
-  font-weight: 300;
-  color: rgba(0,0,0,0.5);
+  font-family: 'Inter', sans-serif !important;
+  font-size: 18px !important;
+  font-weight: 300 !important;
+  color: rgba(0,0,0,0.5) !important;
 }
 
 .section-top-songs .top-songs-text h2 {
-  font-family: 'Host Grotesk', 'Inter', sans-serif;
-  font-weight: 500;
+  font-family: 'Host Grotesk', 'Inter', sans-serif !important;
+  font-weight: 500 !important;
   font-size: 35px;
   color: #1e1e1e;
   margin-top: 8px;
@@ -461,7 +465,6 @@ h2 {
   font-size: 15px;
   color: rgba(0,0,0,0.6);
   line-height: 1.6;
-  margin-bottom: 20px;
 }
 
 .top-songs-legend {
@@ -632,14 +635,35 @@ h2 {
   margin-bottom: 56px;
 }
 
-.outliers-charts {
+.outlier-charts-row {
   display: flex;
   gap: 56px;
   align-items: flex-start;
+  margin-top: 48px;
 }
 
 .outlier-chart-wrap {
   flex: 1;
+  min-width: 0;
+}
+
+.outlier-chart-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.outlier-chart-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 16px;
 }
 
 .outlier-chart-title {
@@ -706,7 +730,6 @@ h2 {
   font-size: 16px;
   line-height: 1.6;
   color: rgba(255,255,255,0.65);
-  margin-bottom: 48px;
 }
 
 .success-stats {

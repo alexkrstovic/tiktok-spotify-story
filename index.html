@@ -90,8 +90,8 @@
   <!-- TOP SONGS ON SPOTIFY -->
   <section id="top-songs" class="section-top-songs">
     <div class="top-songs-text">
-      <p class="section-overtitle">Top Songs on Spotify</p>
-      <h2>Spotify streams vs. TikTok views</h2>
+      <p class="section-overtitle" style="font-family:'Inter',sans-serif;font-weight:300;font-size:18px;">Top Songs on Spotify</p>
+      <h2 style="font-family:'Host Grotesk','Inter',sans-serif;font-weight:500;">Spotify streams vs. TikTok views</h2>
       <p>The 10 most-streamed songs on Spotify. The bars show Spotify streams, the line shows TikTok views - each on its own scale. Where the line sits high above the bar, TikTok outpaced Spotify. Where it dips, the streams came from somewhere else.</p>
       <p>The pattern is clear: the biggest songs on Spotify are not the biggest on TikTok. Blinding Lights and Shape of You tower above everything in streams, yet their TikTok lines barely move. STAY and As It Was are the exceptions - songs where viral momentum and streaming success arrived together.</p>
       <div class="top-songs-legend">
@@ -110,16 +110,30 @@
     <div class="col-text">
       <p class="section-overtitle">Artists Behind the Hits</p>
       <h2>Streaming giants aren't always TikTok giants</h2>
-      <p>Each row shows two bars: Spotify streams in blue, TikTok posts in green - each scaled independently so you can read the pattern, not just the raw numbers. The biggest names in streaming often have a TikTok presence that barely registers by comparison. They built their audiences before short-form video changed the game.</p>
+      <p>The biggest names in streaming have almost no TikTok footprint to show for it.</p>
+      <p>Each row shows two bars: green for Spotify streams, blue for TikTok posts, each scaled independently. The Weeknd alone has nearly 60 billion streams. His TikTok presence barely registers on the same chart. These artists built their audiences through albums, tours, and radio. Short-form video didn't make them. It found them already famous.</p>
     </div>
   </section>
 
   <!-- OUTLIERS / SURPRISES -->
   <section id="outliers" class="section-outliers">
     <p class="section-overtitle">Surprises &amp; Outliers</p>
-    <h2>The Unexpected Results</h2>
-    <p class="outliers-intro">Two kinds of songs break the pattern completely. Some became the soundtrack to billions of TikTok videos - and still barely registered on Spotify. Others amassed billions of streams without a single TikTok post to their name.</p>
-    <div id="outlier-chart-combined"></div>
+    <h2>The rule breakers</h2>
+    <p class="outliers-intro">Some of the most-played sounds on TikTok never made it onto anyone's playlist. Some of the most-streamed artists on Spotify have never had a single viral moment. Both are outliers. Both tell you something the averages can't.</p>
+    <div class="outlier-charts-row">
+      <div class="outlier-chart-wrap">
+        <p class="outlier-chart-title">Billions of TikTok views. Almost no streams.</p>
+        <p class="outlier-chart-desc">These songs were inescapable on TikTok. Yet their Spotify streams are a fraction of what that exposure should have delivered. The moment was loud. The audience didn't follow.</p>
+        <p class="outlier-chart-sub">TikTok Views vs. Spotify Streams</p>
+        <div id="outlier-chart-tiktok"></div>
+      </div>
+      <div class="outlier-chart-wrap">
+        <p class="outlier-chart-title">Billions of streams. Zero TikTok posts.</p>
+        <p class="outlier-chart-desc">These artists never needed a viral moment. They built their audiences through albums, radio, and tours — long before short-form video existed. TikTok didn't make them. It found them already famous.</p>
+        <p class="outlier-chart-sub">Spotify Streams</p>
+        <div id="outlier-chart-spotify"></div>
+      </div>
+    </div>
   </section>
 
   <!-- WHAT DRIVES SUCCESS -->
