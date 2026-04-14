@@ -1072,23 +1072,46 @@ function buildNostalgiaChart(songs) {
       hideTooltip();
     });
 
-  // Labels for top pre-TikTok songs — collision-aware vertical offset
-  const labelH = 13;
+  // Labels for top pre-TikTok songs — iterative collision resolution
+  const labelH = 14;
+  const labelW = 130;
   const placed = [];
+
   toLabel.forEach(d => {
-    let cy = yScale(d.tiktokViews) - 12;
-    // nudge down if it would overlap a previously placed label
-    placed.forEach(p => {
-      if (Math.abs(xScale(d.releaseYear) - p.x) < 80 && Math.abs(cy - p.y) < labelH) {
-        cy = p.y + labelH + 2;
-      }
-    });
-    placed.push({ x: xScale(d.releaseYear), y: cy });
+    let lx = xScale(d.releaseYear);
+    let ly = yScale(d.tiktokViews) - 14;
+
+    // Keep nudging until no overlap with any placed label
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 20) {
+      changed = false;
+      placed.forEach(p => {
+        const dx = Math.abs(lx - p.x);
+        const dy = Math.abs(ly - p.y);
+        if (dx < labelW && dy < labelH) {
+          ly = p.y - labelH - 3;
+          changed = true;
+        }
+      });
+      iterations++;
+    }
+
+    placed.push({ x: lx, y: ly });
+
+    // Leader line from label to dot
+    g.append("line")
+      .attr("class", "n-leader")
+      .attr("x1", lx).attr("x2", lx)
+      .attr("y1", ly + 4).attr("y2", yScale(d.tiktokViews) - 7)
+      .attr("stroke", "rgba(255,255,255,0.15)")
+      .attr("stroke-width", 1)
+      .attr("opacity", 0);
 
     g.append("text")
       .attr("class", "n-label")
-      .attr("x", xScale(d.releaseYear))
-      .attr("y", cy)
+      .attr("x", lx)
+      .attr("y", ly)
       .attr("text-anchor", "middle")
       .attr("fill", "rgba(255,255,255,0.65)")
       .attr("font-size", "10px")
@@ -1125,10 +1148,10 @@ function buildNostalgiaChart(songs) {
     if (entries[0].isIntersecting && !animated) {
       animated = true;
       g.selectAll(".n-dot")
-        .transition().delay((_d, i) => i * 8).duration(450).ease(d3.easeCubicOut)
+        .transition().delay((_d, i) => i * 2).duration(150).ease(d3.easeCubicOut)
         .attr("opacity", 1);
-      g.selectAll(".n-label")
-        .transition().delay(500).duration(400)
+      g.selectAll(".n-label, .n-leader")
+        .transition().delay(160).duration(150)
         .attr("opacity", 1);
     }
   }, { threshold: 0.2 });
@@ -1740,15 +1763,15 @@ function buildOutlierBar(containerId, data, valueKey, axisLabel, secondaryKey) {
   observer.observe(container);
 }
 
-// ─── 6. What Drives Success: stat callouts + verdict chart ───────────────────
+// ─── 6. What Drives Success: stat callouts ────────────────────────────────────
 
 function buildSuccessSection(songs) {
   const buckets = [
-    { label: "No TikTok", color: "#3a4256", min: 0,        max: 0        },
-    { label: "Low",       color: "#2a6e5a", min: 1,        max: 100000   },
-    { label: "Medium",    color: "#1a9e72", min: 100001,   max: 1000000  },
-    { label: "High",      color: "#0adf88", min: 1000001,  max: 10000000 },
-    { label: "Viral",     color: "rgba(255,255,255,0.55)", min: 10000001, max: Infinity },
+    { label: "No TikTok", min: 0,        max: 0        },
+    { label: "Low",       min: 1,        max: 100000   },
+    { label: "Medium",    min: 100001,   max: 1000000  },
+    { label: "High",      min: 1000001,  max: 10000000 },
+    { label: "Viral",     min: 10000001, max: Infinity },
   ];
 
   const valid = songs.filter(d => d.spotify > 0);
@@ -1761,7 +1784,6 @@ function buildSuccessSection(songs) {
     b.avg = d3.mean(group, d => d.spotify) || 0;
   });
 
-  // Stat callouts
   const noAvg    = buckets[0].avg;
   const highAvg  = buckets[3].avg;
   const viralAvg = buckets[4].avg;
@@ -1777,160 +1799,5 @@ function buildSuccessSection(songs) {
       <span class="stat-number">${dropPct}%</span>
       <span class="stat-label">drop in streams once a song crosses into full virality</span>
     </div>
-`;
-
-  // Line + Area chart
-  const container = document.getElementById("success-chart");
-  const totalW  = container.clientWidth || 420;
-  const margin  = { top: 60, right: 24, bottom: 48, left: 24 };
-  const chartW  = totalW - margin.left - margin.right;
-  const chartH  = 230;
-  const totalH  = chartH + margin.top + margin.bottom;
-
-  const xScale = d3.scalePoint()
-    .domain(buckets.map(b => b.label))
-    .range([0, chartW])
-    .padding(0.35);
-
-  const maxAvg = d3.max(buckets, b => b.avg);
-  const yScale = d3.scaleLinear()
-    .domain([0, maxAvg * 1.2])
-    .range([chartH, 0]);
-
-  const svg = d3.select("#success-chart").append("svg")
-    .attr("width", totalW).attr("height", totalH);
-
-  const g = svg.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  // Gradient fill under the line
-  const defs = svg.append("defs");
-  const grad = defs.append("linearGradient")
-    .attr("id", "success-area-grad")
-    .attr("x1", "0").attr("y1", "0")
-    .attr("x2", "0").attr("y2", "1");
-  grad.append("stop").attr("offset", "0%")
-    .attr("stop-color", "#0adf88").attr("stop-opacity", 0.32);
-  grad.append("stop").attr("offset", "100%")
-    .attr("stop-color", "#0adf88").attr("stop-opacity", 0.02);
-
-  // Clip path - expands left-to-right during entrance animation
-  defs.append("clipPath").attr("id", "success-clip")
-    .append("rect")
-    .attr("x", 0).attr("y", -margin.top)
-    .attr("width", 0)
-    .attr("height", chartH + margin.top + 20);
-
-  // Subtle horizontal grid lines
-  g.selectAll(".s-grid")
-    .data(yScale.ticks(4))
-    .join("line")
-    .attr("class", "s-grid")
-    .attr("x1", 0).attr("x2", chartW)
-    .attr("y1", d => yScale(d)).attr("y2", d => yScale(d))
-    .attr("stroke", "rgba(255,255,255,0.05)").attr("stroke-width", 1);
-
-  // Area path
-  const areaGen = d3.area()
-    .x(d => xScale(d.label))
-    .y0(chartH)
-    .y1(d => yScale(d.avg))
-    .curve(d3.curveCatmullRom.alpha(0.5));
-
-  g.append("path")
-    .datum(buckets)
-    .attr("fill", "url(#success-area-grad)")
-    .attr("clip-path", "url(#success-clip)")
-    .attr("d", areaGen);
-
-  // Line path
-  const lineGen = d3.line()
-    .x(d => xScale(d.label))
-    .y(d => yScale(d.avg))
-    .curve(d3.curveCatmullRom.alpha(0.5));
-
-  g.append("path")
-    .datum(buckets)
-    .attr("fill", "none")
-    .attr("stroke", "#0adf88")
-    .attr("stroke-width", 2.5)
-    .attr("stroke-linecap", "round")
-    .attr("clip-path", "url(#success-clip)")
-    .attr("d", lineGen);
-
-  // X-axis tier labels
-  g.selectAll(".s-xlabel")
-    .data(buckets)
-    .join("text")
-    .attr("class", "s-xlabel")
-    .attr("x", d => xScale(d.label))
-    .attr("y", chartH + 30)
-    .attr("text-anchor", "middle")
-    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.38)")
-    .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", d => d.label === "High" ? "13px" : "11px")
-    .attr("font-weight", d => d.label === "High" ? "500" : "300")
-    .text(d => d.label);
-
-  // Dots + value labels (hidden until animation)
-  const dotGroup = g.selectAll(".s-dot-group")
-    .data(buckets)
-    .join("g")
-    .attr("class", "s-dot-group")
-    .attr("transform", d => `translate(${xScale(d.label)},${yScale(d.avg)})`)
-    .attr("opacity", 0);
-
-  // Outer glow ring on the peak dot
-  dotGroup.filter(d => d.label === "High")
-    .append("circle")
-    .attr("r", 11)
-    .attr("fill", "none")
-    .attr("stroke", "#0aff94")
-    .attr("stroke-width", 1)
-    .attr("stroke-opacity", 0.3);
-
-  dotGroup.append("circle")
-    .attr("r", 5.5)
-    .attr("fill", d => d.label === "High" ? "#0aff94" : d.color)
-    .attr("stroke", "#161925")
-    .attr("stroke-width", 2);
-
-  // Value labels above each dot
-  dotGroup.append("text")
-    .attr("y", -16)
-    .attr("text-anchor", "middle")
-    .attr("fill", d => d.label === "High" ? "#ffffff" : "rgba(255,255,255,0.4)")
-    .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", d => d.label === "High" ? "12px" : "10px")
-    .attr("font-weight", d => d.label === "High" ? "500" : "300")
-    .text(d => siFormat(d.avg));
-
-
-  // Axis caption
-  svg.append("text")
-    .attr("x", margin.left)
-    .attr("y", totalH - 6)
-    .attr("fill", "rgba(255,255,255,0.18)")
-    .attr("font-family", "Inter, sans-serif")
-    .attr("font-size", "10px")
-    .text("Average Spotify streams by TikTok activity tier");
-
-  // Entrance animation
-  let animated = false;
-  const observer = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting && !animated) {
-      animated = true;
-      // Sweep the clip path left → right to reveal line + area
-      d3.select("#success-clip rect")
-        .transition().duration(1300).ease(d3.easeCubicInOut)
-        .attr("width", chartW + 20);
-      // Dots stagger in after the line passes them
-      dotGroup.each(function(_d, i) {
-        d3.select(this)
-          .transition().delay(400 + i * 150).duration(350)
-          .attr("opacity", 1);
-      });
-    }
-  }, { threshold: 0.2 });
-  observer.observe(container);
+  `;
 }

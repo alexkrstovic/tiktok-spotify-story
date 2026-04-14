@@ -701,7 +701,7 @@ h2 {
   background-position: center;
   display: flex;
   align-items: center;
-  gap: 80px;
+  justify-content: center;
   padding: 100px 130px;
   position: relative;
 }
@@ -713,13 +713,13 @@ h2 {
   background-color: rgba(22, 25, 37, 0.78);
 }
 
-.success-left {
+.success-content {
   position: relative;
   z-index: 1;
-  flex: 1;
+  max-width: 680px;
 }
 
-.success-left h2 {
+.success-content h2 {
   margin-top: 8px;
   margin-bottom: 16px;
 }
@@ -734,8 +734,10 @@ h2 {
 
 .success-stats {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-direction: row;
+  gap: 40px;
+  margin-top: 40px;
+  flex-wrap: wrap;
 }
 
 .success-stat {
@@ -764,16 +766,6 @@ h2 {
   max-width: 200px;
 }
 
-.success-right {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-}
-
-#success-chart {
-  width: 100%;
-  display: block;
-}
 
 /* ─── Inline scatterplot legend ─── */
 .scatter-inline-legend {
