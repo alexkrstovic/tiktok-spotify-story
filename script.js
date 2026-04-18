@@ -276,6 +276,45 @@ function hideTooltip() {
 
 // ─── Load data once, build all charts ──────────────────────────────────────
 
+let globalSongs = null;
+
+const chartContainers = [
+  "scatterplot", "trends-chart", "nostalgia-chart",
+  "top-songs-chart", "artists-chart",
+  "outlier-chart-tiktok", "outlier-chart-spotify"
+];
+
+function rebuildCharts() {
+  if (!globalSongs) return;
+
+  // Remove elements inserted outside chart containers (expand buttons, legends, etc.)
+  document.querySelectorAll(".chart-expand-btn").forEach(btn => {
+    const wrap = btn.closest("div");
+    if (wrap) wrap.remove();
+    else btn.remove();
+  });
+  document.querySelectorAll(".scatter-inline-legend, .ts-sort-wrap").forEach(el => el.remove());
+
+  chartContainers.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+
+  buildScatterplot(globalSongs);
+  buildTrendsChart(globalSongs);
+  buildNostalgiaChart(globalSongs);
+  buildTopSongsChart(globalSongs);
+  buildArtistsChart(globalSongs);
+  buildOutlierCharts(globalSongs);
+}
+
+// Debounced resize handler
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(rebuildCharts, 300);
+}, { passive: true });
+
 d3.csv("data/songs.csv").then(function (raw) {
 
   const parsed = raw.map(d => {
@@ -306,15 +345,15 @@ d3.csv("data/songs.csv").then(function (raw) {
   // Drop songs whose title or artist contains encoding artifacts
   // Catches both U+FFFD (replacement char) and runs of U+00FD (ý) from latin-1 misread as UTF-8
   const isGarbled = str => str.includes('\uFFFD') || (str.match(/\u00fd/g) || []).length > 2;
-  const songs = deduped.filter(d => !isGarbled(d.track) && !isGarbled(d.artist));
+  globalSongs = deduped.filter(d => !isGarbled(d.track) && !isGarbled(d.artist));
 
-  buildScatterplot(songs);
-  buildTrendsChart(songs);
-  buildNostalgiaChart(songs);
-  buildTopSongsChart(songs);
-  buildArtistsChart(songs);
-  buildOutlierCharts(songs);
-  buildSuccessSection(songs);
+  buildScatterplot(globalSongs);
+  buildTrendsChart(globalSongs);
+  buildNostalgiaChart(globalSongs);
+  buildTopSongsChart(globalSongs);
+  buildArtistsChart(globalSongs);
+  buildOutlierCharts(globalSongs);
+  buildSuccessSection(globalSongs);
 });
 
 // ─── 1. Scatterplot: TikTok Posts vs Spotify Streams ───────────────────────

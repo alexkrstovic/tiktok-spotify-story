@@ -7,14 +7,16 @@
   padding: 0;
 }
 
+html {
+  font-size: 100%; /* 1rem = 16px browser default */
+}
+
 body {
   background-color: #161925;
   color: #ffffff;
-  /* Neue Haas Grotesk Display Pro is not available on Google Fonts.
-     Barlow is used as a close substitute for headings. */
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
 }
 
@@ -40,19 +42,19 @@ h1, h2 {
 }
 
 h1 {
-  font-size: 53px;
+  font-size: clamp(1.875rem, 4.5vw, 3.3125rem); /* 30px → 53px */
   max-width: 669px;
 }
 
 h2 {
-  font-size: 35px;
-  margin-bottom: 16px;
+  font-size: clamp(1.5rem, 3vw, 2.1875rem); /* 24px → 35px */
+  margin-bottom: 1rem;
 }
 
 .overtitle {
   font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-weight: 400;
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1;
   margin-bottom: 0;
 }
@@ -60,9 +62,9 @@ h2 {
 .section-overtitle {
   font-family: 'Host Grotesk', 'Inter', sans-serif;
   font-weight: 400;
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 0.5rem;
 }
 
 /* ─── Navbar ─── */
@@ -83,7 +85,7 @@ h2 {
 .nav-brand {
   font-family: 'Inter', sans-serif;
   font-weight: 700;
-  font-size: 25px;
+  font-size: 1.25rem;
   line-height: normal;
   color: #ffffff;
   white-space: nowrap;
@@ -91,7 +93,7 @@ h2 {
 
 .nav-links {
   display: flex;
-  gap: 31px;
+  gap: 1.5rem;
   align-items: center;
 }
 
@@ -99,7 +101,7 @@ h2 {
   color: #ffffff;
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-  font-size: 16px;
+  font-size: 0.9rem;
   line-height: 1;
   white-space: nowrap;
   transition: color 0.2s;
@@ -112,11 +114,11 @@ h2 {
 .btn-download {
   border: 1px solid #ffffff;
   border-radius: 20px;
-  padding: 10px 20px;
+  padding: 0.5rem 1.125rem;
   color: #ffffff;
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-  font-size: 16px;
+  font-size: 0.9rem;
   white-space: nowrap;
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -200,7 +202,7 @@ h2 {
   overflow: hidden;
   display: flex;
   align-items: flex-end;
-  padding: 0 130px 120px;
+  padding: 0 clamp(1.5rem, 10vw, 8.125rem) clamp(4rem, 8vw, 7.5rem);
 }
 
 .hero-video {
@@ -240,7 +242,7 @@ h2 {
 .hero-body {
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-  font-size: 20px;
+  font-size: clamp(1rem, 1.8vw, 1.25rem); /* 16px → 20px */
   max-width: 523px;
   line-height: 1.5;
   color: #ffffff;
@@ -264,19 +266,19 @@ h2 {
 }
 
 .tagline-banner p {
-  font-family: 'Host Grotesk', 'Inter', sans-serif;
-  font-size: 20px;
-  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1.625rem, 5vw, 3.3125rem); /* 26px → 53px */
+  font-weight: 300;
   color: #1e1e1e;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 /* ─── Two-col sections ─── */
 .section-two-col {
   display: flex;
   align-items: center;
-  gap: 80px;
-  padding: 100px 130px;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: clamp(3.75rem, 7vw, 6.25rem) clamp(1.5rem, 10vw, 8.125rem);
 }
 
 #big-picture {
@@ -524,7 +526,7 @@ h2 {
 }
 
 .top-songs-text {
-  padding: 0 130px 40px;
+  padding: 0 clamp(1.5rem, 10vw, 8.125rem) 2.5rem;
   max-width: 720px;
 }
 
@@ -653,7 +655,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 130px 16px;
+  padding: 0 clamp(1.5rem, 10vw, 8.125rem) 1rem;
 }
 
 .ts-sort-label {
@@ -703,7 +705,7 @@ h2 {
 
 /* ─── Outliers ─── */
 .section-outliers {
-  padding: 100px 130px;
+  padding: clamp(3.75rem, 7vw, 6.25rem) clamp(1.5rem, 10vw, 8.125rem);
 }
 
 .section-outliers h2 {
@@ -788,7 +790,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 100px 130px;
+  padding: clamp(3.75rem, 7vw, 6.25rem) clamp(1.5rem, 10vw, 8.125rem);
   position: relative;
 }
 
@@ -1463,36 +1465,39 @@ h2 {
 /* ─── Footer ─── */
 .footer {
   background-color: #0aff94;
-  padding: 28px 40px;
+  padding: 1.75rem clamp(1.5rem, 5vw, 2.5rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .footer-brand {
   font-family: 'Inter', sans-serif;
   font-weight: 700;
-  font-size: 25px;
+  font-size: 1.25rem;
   color: #1e1e1e;
 }
 
 .footer-nav {
   display: flex;
-  gap: 31px;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .footer-nav a {
   color: #1e1e1e;
   font-family: 'Inter', sans-serif;
   font-weight: 300;
-  font-size: 16px;
+  font-size: 0.9rem;
   line-height: 1;
   transition: opacity 0.2s;
 }
 
 .footer-meta {
   font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 300;
   color: rgba(30,30,30,0.45);
   letter-spacing: 0.06em;
@@ -1501,4 +1506,66 @@ h2 {
 
 .footer-nav a:hover {
   opacity: 0.6;
+}
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE — iPad / Tablet (max 1024px)
+══════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .navbar { padding: 16px 32px; }
+  .nav-links { gap: 1rem; }
+
+  #top-songs-chart { width: calc(100% - 40px); margin: 0 20px; }
+  .outlier-charts-row { gap: 32px; }
+  .success-stats { gap: 24px; }
+}
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE — Mobile (max 640px)
+══════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Nav */
+  .navbar { padding: 14px 20px; }
+
+  /* Hero */
+  .hero-content { max-width: 100%; }
+  .hero-body    { max-width: 100%; }
+
+  /* Tagline */
+  .tagline-banner { padding: 24px; }
+
+  /* Two-col sections — stack vertically */
+  .section-two-col { flex-direction: column; }
+  #nostalgia        { flex-direction: column; }
+  #big-picture      { padding-left: clamp(1.5rem, 10vw, 8.125rem); }
+  .col-chart, .col-text { flex: unset; width: 100%; }
+
+  /* Top Songs */
+  .top-songs-text  { max-width: 100%; }
+  #top-songs-chart { width: calc(100% - 16px); margin: 0 8px; }
+
+  /* Artists — text above chart on mobile */
+  #artists              { flex-direction: column-reverse; }
+  #artists .col-chart,
+  #artists .col-text    { flex: unset; width: 100%; }
+
+  /* Outliers */
+  .outlier-charts-row { flex-direction: column; gap: 48px; }
+
+  /* Verdict */
+  .section-success { min-height: auto; }
+  .success-content { max-width: 100%; }
+  .success-stats   { flex-direction: column; gap: 24px; }
+  .stat-label      { max-width: 100%; }
+
+  /* Footer */
+  .footer {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .footer-nav {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
 }
