@@ -105,35 +105,114 @@ initStagger("#outliers");
 initStagger("#success");
 
 
+// ─── Navbar light/dark detection ─────────────────────────────────────────────
+
+const navbar     = document.querySelector(".navbar");
+const heroSec    = document.querySelector(".hero");
+const heroVid    = document.querySelector(".hero-video");
+const lightSections = document.querySelectorAll(".tagline-banner, .section-top-songs");
+
+// Offscreen canvas for video brightness sampling
+const sampleCanvas = document.createElement("canvas");
+sampleCanvas.width  = 32;
+sampleCanvas.height = 4;
+const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+
+function getVideoBrightness() {
+  if (!heroVid || heroVid.readyState < 2 || heroVid.ended) return null;
+  try {
+    sampleCtx.drawImage(heroVid, 0, 0, 32, 4);
+    const data = sampleCtx.getImageData(0, 0, 32, 4).data;
+    let b = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      b += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    }
+    return b / (data.length / 4); // 0–255
+  } catch (e) {
+    return null;
+  }
+}
+
+function updateNavTheme() {
+  if (!navbar) return;
+  const navH = navbar.offsetHeight;
+  let onLight = false;
+
+  // Static light sections (tagline banner, top songs)
+  lightSections.forEach(section => {
+    const rect = section.getBoundingClientRect();
+    if (rect.top < navH && rect.bottom > 0) onLight = true;
+  });
+
+  // Hero video — sample brightness of current frame
+  if (!onLight && heroSec) {
+    const rect = heroSec.getBoundingClientRect();
+    if (rect.top < navH && rect.bottom > 0) {
+      const brightness = getVideoBrightness();
+      if (brightness !== null && brightness > 160) onLight = true;
+    }
+  }
+
+  navbar.classList.toggle("nav-on-light", onLight);
+}
+
+// Scroll updates for static sections
+window.addEventListener("scroll", updateNavTheme, { passive: true });
+updateNavTheme();
+
 // ─── Scroll progress bar + Hero parallax ────────────────────────────────────
 
 const progressBar = document.getElementById("scroll-progress");
 const heroSection = document.querySelector(".hero");
+const heroParallaxVideo = heroSection ? heroSection.querySelector(".hero-video") : null;
+
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let targetProgress  = 0;
 let currentProgress = 0;
+let scrollY         = window.scrollY;
+let lastScrollY     = window.scrollY;
+let heroInView      = true;
 
 window.addEventListener("scroll", () => {
-  const scrolled = window.scrollY;
-  const total    = document.documentElement.scrollHeight - window.innerHeight;
-  targetProgress = (scrolled / total) * 100;
+  scrollY    = window.scrollY;
+  heroInView = heroSec ? scrollY < heroSec.offsetHeight : false;
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  targetProgress = (scrollY / total) * 100;
+  if (!heroInView) updateNavTheme();
 
-  // Hero parallax
-  if (heroSection) {
-    const heroVideo = heroSection.querySelector(".hero-video");
-    if (heroVideo) {
-      const heroH = heroSection.offsetHeight;
-      if (scrolled <= heroH) {
-        heroVideo.style.transform = `translateY(${scrolled * 0.35}px)`;
-      }
+  // Hide navbar on scroll down, reveal on scroll up
+  if (navbar) {
+    if (scrollY < 80) {
+      navbar.classList.remove("nav-hidden");
+    } else if (scrollY > lastScrollY) {
+      navbar.classList.add("nav-hidden");
+    } else {
+      navbar.classList.remove("nav-hidden");
     }
   }
+  lastScrollY = scrollY;
 }, { passive: true });
 
-(function tickProgress() {
+// ─── Single shared rAF loop ──────────────────────────────────────────────────
+let rafFrame = 0;
+
+(function mainLoop() {
+  rafFrame++;
+
+  // Progress bar — lerp every frame
   currentProgress += (targetProgress - currentProgress) * 0.1;
   if (progressBar) progressBar.style.width = currentProgress + "%";
-  requestAnimationFrame(tickProgress);
+
+  // Hero parallax — only while hero is visible, skip if reduced motion
+  if (!prefersReducedMotion && heroParallaxVideo && heroInView) {
+    heroParallaxVideo.style.transform = `translateY(${scrollY * 0.35}px)`;
+  }
+
+  // Video brightness sampling — throttled to every 6 frames
+  if (heroInView && rafFrame % 6 === 0) updateNavTheme();
+
+  requestAnimationFrame(mainLoop);
 })();
 
 // ─── Hamburger menu ─────────────────────────────────────────────────────────
