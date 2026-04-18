@@ -104,19 +104,6 @@ initStagger("#artists");
 initStagger("#outliers");
 initStagger("#success");
 
-// ─── Verdict video delayed fade-in ──────────────────────────────────────────
-const verdictVideo = document.querySelector(".verdict-video");
-if (verdictVideo) {
-  let verdictAnimated = false;
-  const verdictObserver = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting && !verdictAnimated) {
-      verdictAnimated = true;
-      verdictObserver.disconnect();
-      setTimeout(() => verdictVideo.classList.add("fade-in"), 4000);
-    }
-  }, { threshold: 0.2 });
-  verdictObserver.observe(document.getElementById("success"));
-}
 
 // ─── Scroll progress bar + Hero parallax ────────────────────────────────────
 

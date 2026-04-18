@@ -782,28 +782,14 @@ h2 {
 /* ─── What Drives Success ─── */
 .section-success {
   min-height: 100vh;
+  background-image: url('images/tiktoksinger.jpg');
+  background-size: cover;
+  background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 100px 130px;
   position: relative;
-  overflow: hidden;
-}
-
-.verdict-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 1.2s ease;
-}
-
-.verdict-video.fade-in {
-  opacity: 1;
 }
 
 .section-success::before {
