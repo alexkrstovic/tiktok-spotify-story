@@ -247,7 +247,6 @@ h2 {
   object-fit: cover;
   object-position: center;
   z-index: 0;
-  will-change: transform;
   opacity: 0;
   animation: videoFadeIn 1.2s ease forwards;
   animation-delay: 3s;

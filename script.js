@@ -163,9 +163,6 @@ updateNavTheme();
 // ─── Scroll progress bar + Hero parallax ────────────────────────────────────
 
 const progressBar = document.getElementById("scroll-progress");
-const heroSection = document.querySelector(".hero");
-const heroParallaxVideo = heroSection ? heroSection.querySelector(".hero-video") : null;
-
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let targetProgress  = 0;
@@ -204,13 +201,8 @@ let rafFrame = 0;
   currentProgress += (targetProgress - currentProgress) * 0.1;
   if (progressBar) progressBar.style.width = currentProgress + "%";
 
-  // Hero parallax — only while hero is visible, skip if reduced motion
-  if (!prefersReducedMotion && heroParallaxVideo && heroInView) {
-    heroParallaxVideo.style.transform = `translateY(${scrollY * 0.35}px)`;
-  }
-
-  // Video brightness sampling — throttled to every 6 frames
-  if (heroInView && rafFrame % 6 === 0) updateNavTheme();
+  // Video brightness sampling — throttled to every 12 frames
+  if (heroInView && rafFrame % 12 === 0) updateNavTheme();
 
   requestAnimationFrame(mainLoop);
 })();
