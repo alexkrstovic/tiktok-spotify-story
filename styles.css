@@ -127,19 +127,105 @@ h2 {
   color: #161925;
 }
 
+/* ─── Scroll progress bar ─── */
+#scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: #0aff94;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ─── Shared fade-up animation ─── */
+@keyframes fadeUpIn {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.stagger-item {
+  opacity: 0;
+}
+
+.stagger-item.stagger-visible {
+  animation: fadeUpIn 0.7s ease forwards;
+}
+
+/* ─── Hero animations ─── */
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.hero .overtitle {
+  opacity: 0;
+  animation: heroFadeUp 0.7s ease forwards;
+  animation-delay: 0.2s;
+}
+
+.hero h1 {
+  opacity: 1;
+}
+
+.hero h1 .word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.hero h1 .word.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-body {
+  opacity: 0;
+  animation: heroFadeUp 0.7s ease forwards;
+  animation-delay: 0.9s;
+}
+
+.hero-meta {
+  opacity: 0;
+  animation: heroFadeUp 0.7s ease forwards;
+  animation-delay: 1.15s;
+}
+
 /* ─── Hero ─── */
 .hero {
   min-height: 100vh;
-  background-image: url('images/hero.jpg');
-  background-size: cover;
-  background-position: center;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
   padding: 0 130px 120px;
 }
 
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  will-change: transform;
+  opacity: 0;
+  animation: videoFadeIn 1.2s ease forwards;
+  animation-delay: 3s;
+}
+
+@keyframes videoFadeIn {
+  to { opacity: 1; }
+}
+
 .hero-content {
   max-width: 700px;
+  position: relative;
+  z-index: 1;
+  mix-blend-mode: difference;
 }
 
 .hero .overtitle {
@@ -696,21 +782,35 @@ h2 {
 /* ─── What Drives Success ─── */
 .section-success {
   min-height: 100vh;
-  background-image: url('images/verdict.jpg');
-  background-size: cover;
-  background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 100px 130px;
   position: relative;
+  overflow: hidden;
+}
+
+.verdict-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.verdict-video.fade-in {
+  opacity: 1;
 }
 
 .section-success::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-color: rgba(22, 25, 37, 0.78);
+  background-color: rgba(22, 25, 37, 0.88);
 }
 
 .success-content {

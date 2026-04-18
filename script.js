@@ -42,6 +42,17 @@ function hideOutlierLightbox() {
 
 // Close lightbox on button or backdrop click
 document.addEventListener("DOMContentLoaded", () => {
+  // ─── Hero h1 word-by-word reveal ─────────────────────────────────────────
+  const heroH1 = document.querySelector(".hero h1");
+  if (heroH1) {
+    const words = heroH1.textContent.trim().split(/\s+/);
+    heroH1.innerHTML = words.map(w => `<span class="word">${w}</span>`).join(" ");
+    const spans = heroH1.querySelectorAll(".word");
+    spans.forEach((span, i) => {
+      setTimeout(() => span.classList.add("visible"), 500 + i * 80);
+    });
+  }
+
   // Outlier lightbox
   const lb = document.getElementById("outlier-lightbox");
   if (lb) {
@@ -64,6 +75,79 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// ─── Section text stagger animation ─────────────────────────────────────────
+
+function initStagger(sectionSelector) {
+  const section = document.querySelector(sectionSelector);
+  if (!section) return;
+  const items = section.querySelectorAll(".stagger-item");
+  let animated = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !animated) {
+      animated = true;
+      observer.disconnect();
+      items.forEach((el, i) => {
+        el.style.animationDelay = (i * 0.15) + "s";
+        el.classList.add("stagger-visible");
+      });
+    }
+  }, { threshold: 0.2 });
+  observer.observe(section);
+}
+
+initStagger("#big-picture");
+initStagger("#trends");
+initStagger("#nostalgia");
+initStagger("#top-songs");
+initStagger("#artists");
+initStagger("#outliers");
+initStagger("#success");
+
+// ─── Verdict video delayed fade-in ──────────────────────────────────────────
+const verdictVideo = document.querySelector(".verdict-video");
+if (verdictVideo) {
+  let verdictAnimated = false;
+  const verdictObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !verdictAnimated) {
+      verdictAnimated = true;
+      verdictObserver.disconnect();
+      setTimeout(() => verdictVideo.classList.add("fade-in"), 4000);
+    }
+  }, { threshold: 0.2 });
+  verdictObserver.observe(document.getElementById("success"));
+}
+
+// ─── Scroll progress bar + Hero parallax ────────────────────────────────────
+
+const progressBar = document.getElementById("scroll-progress");
+const heroSection = document.querySelector(".hero");
+
+let targetProgress  = 0;
+let currentProgress = 0;
+
+window.addEventListener("scroll", () => {
+  const scrolled = window.scrollY;
+  const total    = document.documentElement.scrollHeight - window.innerHeight;
+  targetProgress = (scrolled / total) * 100;
+
+  // Hero parallax
+  if (heroSection) {
+    const heroVideo = heroSection.querySelector(".hero-video");
+    if (heroVideo) {
+      const heroH = heroSection.offsetHeight;
+      if (scrolled <= heroH) {
+        heroVideo.style.transform = `translateY(${scrolled * 0.35}px)`;
+      }
+    }
+  }
+}, { passive: true });
+
+(function tickProgress() {
+  currentProgress += (targetProgress - currentProgress) * 0.1;
+  if (progressBar) progressBar.style.width = currentProgress + "%";
+  requestAnimationFrame(tickProgress);
+})();
 
 // ─── Hamburger menu ─────────────────────────────────────────────────────────
 
@@ -1792,16 +1876,47 @@ function buildSuccessSection(songs) {
 
   document.getElementById("success-stats").innerHTML = `
     <div class="success-stat">
-      <span class="stat-number">${multiplier}×</span>
+      <span class="stat-number" data-target="${multiplier}" data-suffix="×">0×</span>
       <span class="stat-label">more streams for high TikTok activity songs compared to songs with no TikTok at all</span>
     </div>
     <div class="success-stat">
-      <span class="stat-number">${dropPct}%</span>
+      <span class="stat-number" data-target="${dropPct}" data-suffix="%">0%</span>
       <span class="stat-label">drop in streams once a song crosses into full virality</span>
     </div>
     <div class="success-stat">
-      <span class="stat-number">84%</span>
+      <span class="stat-number" data-target="84" data-suffix="%">0%</span>
       <span class="stat-label">of songs entering the Billboard Global 200 in 2024 had a TikTok viral moment first (<a href="https://www.musicbusinessworldwide.com/tiktok-84-of-songs-that-entered-billboards-global-200-chart-in-2024-went-viral-on-our-platform-first/" target="_blank" rel="noopener">Music Business Worldwide, 2024</a>)</span>
     </div>
   `;
+
+  // Count-up animation on scroll into view
+  function animateCountUp(el, target, suffix, duration) {
+    const isDecimal = String(target).includes(".");
+    const start = performance.now();
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      const value    = isDecimal
+        ? (eased * target).toFixed(1).replace(/\.0$/, "")
+        : Math.round(eased * target);
+      el.textContent = value + suffix;
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  let statsAnimated = false;
+  const statsContainer = document.getElementById("success-stats");
+  const statsObserver  = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !statsAnimated) {
+      statsAnimated = true;
+      statsObserver.disconnect();
+      statsContainer.querySelectorAll(".stat-number").forEach((el, i) => {
+        const target = parseFloat(el.dataset.target);
+        const suffix = el.dataset.suffix;
+        setTimeout(() => animateCountUp(el, target, suffix, 1200), i * 200);
+      });
+    }
+  }, { threshold: 0.4 });
+  statsObserver.observe(statsContainer);
 }
