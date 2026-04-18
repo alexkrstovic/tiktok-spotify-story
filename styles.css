@@ -766,6 +766,16 @@ h2 {
   max-width: 200px;
 }
 
+.stat-label a,
+.success-body a,
+.col-text a,
+.outliers-intro a,
+.outlier-chart-desc a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 
 /* ─── Inline scatterplot legend ─── */
 .scatter-inline-legend {

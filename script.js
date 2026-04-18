@@ -1799,5 +1799,9 @@ function buildSuccessSection(songs) {
       <span class="stat-number">${dropPct}%</span>
       <span class="stat-label">drop in streams once a song crosses into full virality</span>
     </div>
+    <div class="success-stat">
+      <span class="stat-number">84%</span>
+      <span class="stat-label">of songs entering the Billboard Global 200 in 2024 had a TikTok viral moment first (<a href="https://www.musicbusinessworldwide.com/tiktok-84-of-songs-that-entered-billboards-global-200-chart-in-2024-went-viral-on-our-platform-first/" target="_blank" rel="noopener">Music Business Worldwide, 2024</a>)</span>
+    </div>
   `;
 }
