@@ -2017,3 +2017,108 @@ function buildSuccessSection(songs) {
   }, { threshold: 0.4 });
   statsObserver.observe(statsContainer);
 }
+
+// ─── Music Player ─────────────────────────────────────────────────────────────
+(function initMusicPlayer() {
+  const audio     = document.getElementById("bg-audio");
+  const playBtn   = document.getElementById("music-play");
+  const canvas    = document.getElementById("music-waveform");
+  const ctx       = canvas.getContext("2d");
+
+  const iconPlay   = document.getElementById("icon-play");
+  const iconPause  = document.getElementById("icon-pause");
+
+  const hint = document.getElementById("music-hint");
+
+  function hideHint() { hint.classList.add("hint-hidden"); }
+
+  // Hide hint when user scrolls past the hero
+  const heroEl = document.querySelector(".hero");
+  const hintObserver = new IntersectionObserver(entries => {
+    if (!entries[0].isIntersecting) hideHint();
+  }, { threshold: 0 });
+  hintObserver.observe(heroEl);
+
+  let playing = false;
+  let audioCtx, analyser, source, dataArray, bufferLength;
+
+  audio.muted = false;
+  audio.volume = 0.4;
+
+  canvas.width = 100;
+
+  const BAR_COUNT = 14;
+  const BAR_GAP   = 2;
+  const BAR_W     = (canvas.width - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT;
+  const MAX_H     = canvas.height;
+
+  // Idle animation when paused or muted
+  let idlePhase = 0;
+
+  function initAudioContext() {
+    if (audioCtx) return;
+    audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    analyser  = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    bufferLength = analyser.frequencyBinCount;
+    dataArray    = new Uint8Array(bufferLength);
+    source = audioCtx.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+  }
+
+  function drawBars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let heights = [];
+
+    if (playing && analyser) {
+      analyser.getByteFrequencyData(dataArray);
+      const step = Math.floor(bufferLength / BAR_COUNT);
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const val = dataArray[i * step] / 255;
+        heights.push(Math.max(3, val * MAX_H));
+      }
+    } else {
+      // Gentle idle wave
+      idlePhase += 0.05;
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const h = 3 + Math.abs(Math.sin(idlePhase + i * 0.5)) * 6;
+        heights.push(h);
+      }
+    }
+
+    heights.forEach((h, i) => {
+      const x = i * (BAR_W + BAR_GAP);
+      const y = (MAX_H - h) / 2;
+      ctx.fillStyle = playing ? "rgba(10,255,148,0.85)" : "rgba(255,255,255,0.3)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, BAR_W, h, 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(drawBars);
+  }
+
+  // Start the draw loop immediately
+  drawBars();
+
+  playBtn.addEventListener("click", () => {
+    hideHint();
+    initAudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    if (playing) {
+      audio.pause();
+      playing = false;
+      iconPlay.style.display  = "";
+      iconPause.style.display = "none";
+    } else {
+      audio.play();
+      playing = true;
+      iconPlay.style.display  = "none";
+      iconPause.style.display = "";
+    }
+  });
+
+})();

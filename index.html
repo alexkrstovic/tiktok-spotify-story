@@ -172,6 +172,19 @@
     </div>
   </div>
 
+  <!-- MUSIC PLAYER -->
+  <div id="music-wrapper">
+    <p id="music-hint">Enjoy the music while you scroll</p>
+  <div id="music-player">
+    <audio id="bg-audio" loop src="music/Pulsar_The Grey Room_Density & Time.mp3"></audio>
+    <button id="music-play" aria-label="Play">
+      <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <canvas id="music-waveform" height="28"></canvas>
+  </div>
+  </div>
+
   <!-- FOOTER -->
   <footer class="footer">
     <span class="footer-brand">Tiktok Vs Spotify</span>
