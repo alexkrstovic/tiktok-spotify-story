@@ -14,29 +14,10 @@
 
   <div id="scroll-progress"></div>
 
-  <!-- NAVBAR -->
-  <header class="navbar">
-    <span class="nav-brand">Tiktok Vs Spotify</span>
-    <nav class="nav-links">
-      <a href="#big-picture">Big Picture</a>
-      <a href="#trends">Discovering the Trends</a>
-      <a href="#nostalgia">The Nostalgia Effect</a>
-      <a href="#top-songs">Top Songs</a>
-      <a href="#artists">Top Artists</a>
-      <a href="#outliers">Outliers</a>
-      <a href="#success">The Verdict</a>
-    </nav>
-    <a href="data/songs.csv" class="btn-download" download>Download dataset</a>
-    <button class="nav-hamburger" aria-label="Menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-  </header>
 
   <!-- HERO -->
   <section class="hero">
-    <video class="hero-video" autoplay muted playsinline>
+    <video class="hero-video" muted playsinline loop>
       <source src="images/tiktokgirl.mov" type="video/mp4">
     </video>
     <div class="hero-content">
@@ -71,7 +52,7 @@
     <div class="col-text">
       <p class="section-overtitle stagger-item">Discovering the Trends</p>
       <h2 class="stagger-item">A clear pattern - with one strange twist</h2>
-      <p class="stagger-item">All 4,000 songs are grouped into five tiers by how many times they were posted to TikTok. <strong>Low</strong> means up to 100,000 posts. <strong>Medium</strong> is 100K to 1 million. <strong>High</strong> is 1M to 10 million. <strong>Viral</strong> is anything beyond that.</p>
+      <p class="stagger-item">All 4,000 songs are grouped into five tiers by how many times they were posted to TikTok. <strong>No TikTok</strong> means zero posts. <strong>Low</strong> means up to 100,000 posts. <strong>Medium</strong> is 100K to 1 million. <strong>High</strong> is 1M to 10 million. <strong>Viral</strong> is anything beyond that.</p>
       <p class="stagger-item">As TikTok activity rises, so do average Spotify streams, right up until the Viral tier. Songs with over 10 million TikTok posts actually average fewer streams than the High tier below them. Maximum exposure does not equal maximum success.</p>
     </div>
     <div class="col-chart">
@@ -87,8 +68,9 @@
     <div class="col-text">
       <p class="section-overtitle stagger-item">The Nostalgia Effect</p>
       <h2 class="stagger-item">TikTok doesn't just make new hits. It revives old ones.</h2>
-      <p class="stagger-item">Each dot is a song with at least 500 million TikTok views. Green dots were released before TikTok existed. The two biggest of all - "Monkeys Spinning Monkeys" (2011) and "Love You So" (2005) - have a combined 448 billion views between them.</p>
-      <p class="stagger-item">TikTok has a way of finding sounds from years ago and making them feel brand new. The platform doesn't just reflect what's popular - it decides what gets a second life. In 2024 alone, <a href="https://www.musicbusinessworldwide.com/tiktok-84-of-songs-that-entered-billboards-global-200-chart-in-2024-went-viral-on-our-platform-first/" target="_blank" rel="noopener">more than 50 catalog songs</a> charted globally after going viral on TikTok. <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6143552" target="_blank" rel="noopener">Researchers</a> describe this as one of the platform's most distinctive effects on the music market.</p>
+      <p class="stagger-item">Each dot is a song with at least 500 million TikTok views. Pink dots were released before TikTok existed. The two biggest of all - "Monkeys Spinning Monkeys" (2011) and "Love You So" (2005) - have a combined 448 billion views between them.</p>
+      <p class="stagger-item">TikTok has a way of finding sounds from years ago and making them feel brand new. The platform doesn't just reflect what's popular - it decides what gets a second life. In 2024 alone, <a href="https://www.musicbusinessworldwide.com/tiktok-84-of-songs-that-entered-billboards-global-200-chart-in-2024-went-viral-on-our-platform-first/" target="_blank" rel="noopener">more than 50 catalog songs</a> charted globally after going viral on TikTok. <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6143552" target="_blank" rel="noopener">Researchers</a> describe this as one of the platform's most distinctive effects on the music market. Whether every TikTok revival translates to lasting Spotify streams is harder to measure. The bump is real, but often short-lived.</p>
+      <p class="stagger-item" style="font-size:11px;opacity:0.5;margin-top:6px;font-style:italic;">500M views was used as the threshold to identify songs with genuine viral scale on the platform.</p>
     </div>
   </section>
 
@@ -97,12 +79,13 @@
     <div class="top-songs-text">
       <p class="section-overtitle stagger-item" style="font-family:'Inter',sans-serif;font-weight:300;font-size:18px;">Top Songs on Spotify</p>
       <h2 class="stagger-item" style="font-family:'Host Grotesk','Inter',sans-serif;font-weight:500;">Spotify streams vs. TikTok views</h2>
-      <p class="stagger-item">The 10 most-streamed songs on Spotify. The bars show Spotify streams, the line shows TikTok views - each on its own scale. Where the line sits high above the bar, TikTok outpaced Spotify. Where it dips, the streams came from somewhere else.</p>
-      <p class="stagger-item">The pattern is clear: the biggest songs on Spotify are not the biggest on TikTok. Blinding Lights and Shape of You tower above everything in streams, yet their TikTok lines barely move. STAY and As It Was are the exceptions - songs where viral momentum and streaming success arrived together.</p>
+      <p class="stagger-item">The 10 most-streamed songs on Spotify, compared against their TikTok presence. Both metrics are scaled to the same axis as a percentage of each platform's biggest song, so the bars are directly comparable.</p>
+      <p class="stagger-item">The pattern is stark. Blinding Lights and Shape of You own Spotify but are almost invisible on TikTok. Where you see two tall bars side by side, like STAY and As It Was, both platforms agreed. Everywhere else, they didn't.</p>
       <div class="top-songs-legend stagger-item">
         <span class="tsl-item"><span class="tsl-swatch tsl-bar"></span>Spotify Streams</span>
-        <span class="tsl-item"><span class="tsl-swatch tsl-line"></span>TikTok Views</span>
+        <span class="tsl-item"><span class="tsl-swatch tsl-bar" style="background:#BF1363;"></span>TikTok Views</span>
       </div>
+      <p class="stagger-item" style="font-size:11px;opacity:0.5;margin-top:6px;font-style:italic;">100% = that platform's biggest song</p>
     </div>
     <div id="top-songs-chart"></div>
   </section>
@@ -146,8 +129,9 @@
     <div class="success-content">
       <p class="section-overtitle stagger-item">The Verdict</p>
       <h2 class="stagger-item">TikTok is a tool. Not a guarantee.</h2>
+      <p class="success-body stagger-item">The songs and artists that dominate Spotify and the ones that dominate TikTok are almost entirely different. The platforms have built two separate audiences, and crossing from one to the other is the exception, not the rule.</p>
       <p class="success-body stagger-item">TikTok helps - but only up to a point. Songs with serious TikTok activity average significantly more streams than songs with none. Go further into full virality and the numbers actually drop. The moment burns out before it converts. <a href="https://www.musicbusinessworldwide.com/tiktok-84-of-songs-that-entered-billboards-global-200-chart-in-2024-went-viral-on-our-platform-first/" target="_blank" rel="noopener">Industry data</a> finds an average <strong>11% lift in on-demand streams</strong> within three days of peak TikTok activity. Real, but short-lived.</p>
-      <p class="success-body stagger-item">The songs and artists that dominate Spotify built their audiences through something TikTok cannot manufacture. A fanbase that keeps coming back long after the trend has moved on. <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6143552" target="_blank" rel="noopener">Independent researchers</a> describe TikTok as a complementary promotional channel, not the engine of success itself.</p>
+      <p class="success-body stagger-item"><a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6143552" target="_blank" rel="noopener">Independent researchers</a> describe TikTok as a complementary promotional channel, not the engine of success itself.</p>
       <div id="success-stats" class="success-stats stagger-item"></div>
     </div>
   </section>
@@ -173,6 +157,17 @@
   </div>
 
   <!-- MUSIC PLAYER -->
+  <!-- SIDE NAV -->
+  <nav id="side-nav" aria-label="Section navigation">
+    <a href="#big-picture"  class="side-nav-item" data-section="big-picture">Big Picture</a>
+    <a href="#trends"       class="side-nav-item" data-section="trends">Trends</a>
+    <a href="#nostalgia"    class="side-nav-item" data-section="nostalgia">Nostalgia</a>
+    <a href="#top-songs"    class="side-nav-item" data-section="top-songs">Top Songs</a>
+    <a href="#artists"      class="side-nav-item" data-section="artists">Artists</a>
+    <a href="#outliers"     class="side-nav-item" data-section="outliers">Outliers</a>
+    <a href="#success"      class="side-nav-item" data-section="success">Verdict</a>
+  </nav>
+
   <div id="music-wrapper">
     <p id="music-hint">Enjoy the music while you scroll</p>
   <div id="music-player">

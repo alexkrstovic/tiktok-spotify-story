@@ -42,6 +42,17 @@ function hideOutlierLightbox() {
 
 // Close lightbox on button or backdrop click
 document.addEventListener("DOMContentLoaded", () => {
+  // ─── Hero video — delayed start + smooth loop ────────────────────────────
+  const heroVid = document.querySelector(".hero-video");
+  if (heroVid) {
+    heroVid.addEventListener("playing", () => {
+      heroVid.style.opacity = "1";
+    }, { once: true });
+
+    setTimeout(() => heroVid.play(), 7000);
+
+  }
+
   // ─── Hero h1 word-by-word reveal ─────────────────────────────────────────
   const heroH1 = document.querySelector(".hero h1");
   if (heroH1) {
@@ -105,70 +116,15 @@ initStagger("#outliers");
 initStagger("#success");
 
 
-// ─── Navbar light/dark detection ─────────────────────────────────────────────
+// ─── Scroll progress bar ────────────────────────────────────────────────────
 
-const navbar     = document.querySelector(".navbar");
 const heroSec    = document.querySelector(".hero");
-const heroVid    = document.querySelector(".hero-video");
-const lightSections = document.querySelectorAll(".tagline-banner, .section-top-songs");
-
-// Offscreen canvas for video brightness sampling
-const sampleCanvas = document.createElement("canvas");
-sampleCanvas.width  = 32;
-sampleCanvas.height = 4;
-const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
-
-function getVideoBrightness() {
-  if (!heroVid || heroVid.readyState < 2 || heroVid.ended) return null;
-  try {
-    sampleCtx.drawImage(heroVid, 0, 0, 32, 4);
-    const data = sampleCtx.getImageData(0, 0, 32, 4).data;
-    let b = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      b += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    }
-    return b / (data.length / 4); // 0–255
-  } catch (e) {
-    return null;
-  }
-}
-
-function updateNavTheme() {
-  if (!navbar) return;
-  const navH = navbar.offsetHeight;
-  let onLight = false;
-
-  // Static light sections (tagline banner, top songs)
-  lightSections.forEach(section => {
-    const rect = section.getBoundingClientRect();
-    if (rect.top < navH && rect.bottom > 0) onLight = true;
-  });
-
-  // Hero video — sample brightness of current frame
-  if (!onLight && heroSec) {
-    const rect = heroSec.getBoundingClientRect();
-    if (rect.top < navH && rect.bottom > 0) {
-      const brightness = getVideoBrightness();
-      if (brightness !== null && brightness > 160) onLight = true;
-    }
-  }
-
-  navbar.classList.toggle("nav-on-light", onLight);
-}
-
-// Scroll updates for static sections
-window.addEventListener("scroll", updateNavTheme, { passive: true });
-updateNavTheme();
-
-// ─── Scroll progress bar + Hero parallax ────────────────────────────────────
-
 const progressBar = document.getElementById("scroll-progress");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let targetProgress  = 0;
 let currentProgress = 0;
 let scrollY         = window.scrollY;
-let lastScrollY     = window.scrollY;
 let heroInView      = true;
 
 window.addEventListener("scroll", () => {
@@ -176,54 +132,15 @@ window.addEventListener("scroll", () => {
   heroInView = heroSec ? scrollY < heroSec.offsetHeight : false;
   const total = document.documentElement.scrollHeight - window.innerHeight;
   targetProgress = (scrollY / total) * 100;
-  if (!heroInView) updateNavTheme();
-
-  // Hide navbar on scroll down, reveal on scroll up
-  if (navbar) {
-    if (scrollY < 80) {
-      navbar.classList.remove("nav-hidden");
-    } else if (scrollY > lastScrollY) {
-      navbar.classList.add("nav-hidden");
-    } else {
-      navbar.classList.remove("nav-hidden");
-    }
-  }
-  lastScrollY = scrollY;
 }, { passive: true });
 
 // ─── Single shared rAF loop ──────────────────────────────────────────────────
-let rafFrame = 0;
 
 (function mainLoop() {
-  rafFrame++;
-
-  // Progress bar — lerp every frame
   currentProgress += (targetProgress - currentProgress) * 0.1;
   if (progressBar) progressBar.style.width = currentProgress + "%";
-
-  // Video brightness sampling — throttled to every 12 frames
-  if (heroInView && rafFrame % 12 === 0) updateNavTheme();
-
   requestAnimationFrame(mainLoop);
 })();
-
-// ─── Hamburger menu ─────────────────────────────────────────────────────────
-
-const hamburger = document.querySelector('.nav-hamburger');
-const navLinks  = document.querySelector('.nav-links');
-
-if (hamburger && navLinks) {
-  hamburger.addEventListener('click', () => {
-    hamburger.classList.toggle('open');
-    navLinks.classList.toggle('nav-open');
-  });
-  navLinks.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      hamburger.classList.remove('open');
-      navLinks.classList.remove('nav-open');
-    });
-  });
-}
 
 // ─── Heavy scroll feel ───────────────────────────────────────────────────────
 // Intercepts wheel events and applies a lerp so the page decelerates slowly.
@@ -462,6 +379,7 @@ function buildScatterplot(songs) {
   legend.innerHTML = `
     <div class="legend-title">Each dot is one song</div>`;
   container.appendChild(legend);
+
 
   // Start invisible
   svg.style("opacity", 0);
@@ -1234,14 +1152,14 @@ function buildNostalgiaChart(songs) {
     .attr("cx", d => xScale(d.releaseYear))
     .attr("cy", d => yScale(d.tiktokViews))
     .attr("r", 5)
-    .attr("fill", d => d.releaseYear < TIKTOK_LAUNCH ? "#0aff94" : "rgba(255,255,255,0.15)")
+    .attr("fill", d => d.releaseYear < TIKTOK_LAUNCH ? "#BF1363" : "rgba(255,255,255,0.15)")
     .attr("fill-opacity", d => d.releaseYear < TIKTOK_LAUNCH ? 0.85 : 1)
     .attr("opacity", 0)
     .style("cursor", "pointer")
     .on("mouseover", function(event, d) {
       d3.select(this).attr("r", 7);
       showTooltip(event,
-        `<strong style="color:#0aff94">${d.track}</strong><br>
+        `<strong style="color:#BF1363">${d.track}</strong><br>
          <span style="opacity:.7">${d.artist}</span><br>
          <span style="opacity:.6">Released: ${d.releaseYear}</span><br>
          <span style="opacity:.6">TikTok Views: ${siFormat(d.tiktokViews)}</span>`
@@ -1314,7 +1232,7 @@ function buildNostalgiaChart(songs) {
   // Legend — sits just below x axis
   const legY = totalH - 10;
   const legG = svg.append("g").attr("transform", `translate(${margin.left}, ${legY})`);
-  legG.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 4).attr("fill", "#0aff94").attr("fill-opacity", 0.85);
+  legG.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 4).attr("fill", "#BF1363").attr("fill-opacity", 0.85);
   legG.append("text").attr("x", 10).attr("y", 0).attr("dominant-baseline", "middle")
     .attr("fill", "rgba(255,255,255,0.4)").attr("font-size", "10px").attr("font-family", "Inter, sans-serif")
     .text("Released before TikTok (2018)");
@@ -1339,7 +1257,7 @@ function buildNostalgiaChart(songs) {
   observer.observe(container);
 }
 
-// ─── 3c. Top Songs ───────────────────────────────────────────────────────────
+// ─── 3c. Top Songs — normalized grouped bars ─────────────────────────────────
 
 function buildTopSongsChart(songs) {
   const data = songs
@@ -1347,24 +1265,34 @@ function buildTopSongsChart(songs) {
     .sort((a, b) => b.spotify - a.spotify)
     .slice(0, 10);
 
+  const maxSpotify = d3.max(data, d => d.spotify);
+  const maxTikTok  = d3.max(data, d => d.tiktokViews || 0);
+
+  // Normalize to 0–100%
+  data.forEach(d => {
+    d.spotifyPct = d.spotify / maxSpotify * 100;
+    d.tiktokPct  = (d.tiktokViews || 0) / maxTikTok * 100;
+  });
+
   const container = document.getElementById("top-songs-chart");
   const totalW = container.getBoundingClientRect().width || (window.innerWidth - 80);
-  const margin = { top: 20, right: 60, bottom: 72, left: 60 };
+  const margin = { top: 20, right: 20, bottom: 72, left: 48 };
   const chartW = totalW - margin.left - margin.right;
   const chartH = 320;
   const totalH = chartH + margin.top + margin.bottom;
 
-  const xScale = d3.scaleBand()
+  const xSong = d3.scaleBand()
     .domain(data.map(d => d.track))
     .range([0, chartW])
-    .padding(0.3);
+    .padding(0.25);
 
-  const ySpotify = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d.spotify) * 1.1])
-    .range([chartH, 0]);
+  const xSub = d3.scaleBand()
+    .domain(["spotify", "tiktok"])
+    .range([0, xSong.bandwidth()])
+    .padding(0.08);
 
-  const yTikTok = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d.tiktokViews || 0) * 1.1])
+  const yScale = d3.scaleLinear()
+    .domain([0, 100])
     .range([chartH, 0]);
 
   const svg = d3.select("#top-songs-chart").append("svg")
@@ -1373,125 +1301,87 @@ function buildTopSongsChart(songs) {
   const g = svg.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Subtle grid lines
+  // Grid lines
   g.selectAll(".ts-grid")
-    .data(ySpotify.ticks(5))
+    .data(yScale.ticks(5))
     .join("line")
     .attr("class", "ts-grid")
     .attr("x1", 0).attr("x2", chartW)
-    .attr("y1", d => ySpotify(d)).attr("y2", d => ySpotify(d))
+    .attr("y1", d => yScale(d)).attr("y2", d => yScale(d))
     .attr("stroke", "rgba(0,0,0,0.08)").attr("stroke-width", 1);
 
   // Spotify bars
-  g.selectAll(".ts-bar")
+  g.selectAll(".ts-bar-spotify")
     .data(data)
     .join("rect")
-    .attr("class", "ts-bar")
-    .attr("x", d => xScale(d.track))
+    .attr("class", "ts-bar-spotify")
+    .attr("x", d => xSong(d.track) + xSub("spotify"))
     .attr("y", chartH)
-    .attr("width", xScale.bandwidth())
+    .attr("width", xSub.bandwidth())
     .attr("height", 0)
     .attr("fill", "#001409")
     .attr("rx", 2)
+    .style("cursor", "pointer")
     .on("mouseover", function(event, d) {
       d3.select(this).attr("fill-opacity", 0.7);
       showTooltip(event,
-        `<strong>${d.track}</strong><br>${d.artist}<br>
-         <span style="opacity:.7">Spotify Streams: ${siFormat(d.spotify)}</span><br>
-         <span style="opacity:.7">TikTok Views: ${d.tiktokViews ? siFormat(d.tiktokViews) : "None"}</span>`);
+        `<strong>${d.track}</strong><br><span style="opacity:.7">${d.artist}</span><br>
+         <span style="color:#0aff94">Spotify: ${siFormat(d.spotify)} streams</span><br>
+         <span style="opacity:.6">${d.spotifyPct.toFixed(0)}% of top song</span>`);
     })
     .on("mousemove", moveTooltip)
     .on("mouseleave", function() { d3.select(this).attr("fill-opacity", 1); hideTooltip(); });
 
-  // TikTok line (drawn after bars so it sits on top)
-  const lineGen = d3.line()
-    .x(d => xScale(d.track) + xScale.bandwidth() / 2)
-    .y(d => yTikTok(d.tiktokViews || 0))
-    .curve(d3.curveMonotoneX);
-
-  // Clip path to animate line left-to-right
-  svg.append("defs").append("clipPath").attr("id", "ts-line-clip")
-    .append("rect")
-    .attr("x", 0).attr("y", -margin.top)
-    .attr("width", 0)
-    .attr("height", chartH + margin.top + 10);
-
-  g.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "#007A33")
-    .attr("stroke-width", 2.5)
-    .attr("stroke-linecap", "round")
-    .attr("clip-path", "url(#ts-line-clip)")
-    .attr("d", lineGen);
-
-  // TikTok dots
-  g.selectAll(".ts-dot")
+  // TikTok bars
+  g.selectAll(".ts-bar-tiktok")
     .data(data)
-    .join("circle")
-    .attr("class", "ts-dot")
-    .attr("cx", d => xScale(d.track) + xScale.bandwidth() / 2)
-    .attr("cy", d => yTikTok(d.tiktokViews || 0))
-    .attr("r", 4)
-    .attr("fill", "#007A33")
-    .attr("stroke", "#0aff94")
-    .attr("stroke-width", 1.5)
-    .attr("opacity", 0)
+    .join("rect")
+    .attr("class", "ts-bar-tiktok")
+    .attr("x", d => xSong(d.track) + xSub("tiktok"))
+    .attr("y", chartH)
+    .attr("width", xSub.bandwidth())
+    .attr("height", 0)
+    .attr("fill", "#BF1363")
+    .attr("rx", 2)
+    .style("cursor", "pointer")
     .on("mouseover", function(event, d) {
-      d3.select(this).attr("r", 6);
+      d3.select(this).attr("fill-opacity", 0.7);
       showTooltip(event,
-        `<strong>${d.track}</strong><br>${d.artist}<br>
-         <span style="opacity:.7">TikTok Views: ${d.tiktokViews ? siFormat(d.tiktokViews) : "None"}</span>`);
+        `<strong>${d.track}</strong><br><span style="opacity:.7">${d.artist}</span><br>
+         <span style="color:#BF1363">TikTok: ${d.tiktokViews ? siFormat(d.tiktokViews) + " views" : "No data"}</span><br>
+         <span style="opacity:.6">${d.tiktokPct.toFixed(0)}% of top song</span>`);
     })
     .on("mousemove", moveTooltip)
-    .on("mouseleave", function() { d3.select(this).attr("r", 4); hideTooltip(); });
+    .on("mouseleave", function() { d3.select(this).attr("fill-opacity", 1); hideTooltip(); });
 
-  // Left Y axis — Spotify
+  // Y axis — percentage
   g.append("g")
-    .call(d3.axisLeft(ySpotify).ticks(5).tickFormat(siFormat).tickSize(0))
+    .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => d + "%").tickSize(0))
     .call(ax => ax.select(".domain").remove())
     .call(ax => ax.selectAll("text")
       .attr("fill", "rgba(0,0,0,0.45)").attr("font-size", "10px")
       .attr("font-family", "Inter, sans-serif").attr("dx", "-6"));
 
-  // Left axis label
+  // Y axis label
   svg.append("text")
-    .attr("transform", `translate(14, ${margin.top + chartH / 2}) rotate(-90)`)
+    .attr("transform", `translate(12, ${margin.top + chartH / 2}) rotate(-90)`)
     .attr("text-anchor", "middle")
-    .attr("fill", "rgba(0,0,0,0.55)").attr("font-size", "11px")
+    .attr("fill", "rgba(0,0,0,0.45)").attr("font-size", "10px")
     .attr("font-family", "Inter, sans-serif")
-    .text("Spotify Streams");
+    .text("Relative popularity (0–100%)");
 
-  // Right Y axis — TikTok
-  g.append("g")
-    .attr("transform", `translate(${chartW},0)`)
-    .call(d3.axisRight(yTikTok).ticks(5).tickFormat(siFormat).tickSize(0))
-    .call(ax => ax.select(".domain").remove())
-    .call(ax => ax.selectAll("text")
-      .attr("fill", "rgba(0,0,0,0.45)").attr("font-size", "10px")
-      .attr("font-family", "Inter, sans-serif").attr("dx", "6"));
-
-  // Right axis label
-  svg.append("text")
-    .attr("transform", `translate(${totalW - 14}, ${margin.top + chartH / 2}) rotate(90)`)
-    .attr("text-anchor", "middle")
-    .attr("fill", "rgba(0,0,0,0.55)").attr("font-size", "11px")
-    .attr("font-family", "Inter, sans-serif")
-    .text("TikTok Views");
 
   // X axis — song names
   g.append("g")
     .attr("transform", `translate(0,${chartH})`)
-    .call(d3.axisBottom(xScale).tickSize(0))
+    .call(d3.axisBottom(xSong).tickSize(0))
     .call(ax => ax.select(".domain").attr("stroke", "rgba(0,0,0,0.15)"))
     .call(ax => ax.selectAll("text").remove())
     .call(ax => {
-      const bw = xScale.bandwidth();
+      const bw = xSong.bandwidth();
       data.forEach(d => {
         const words = d.track.split(" ");
-        // split into two roughly equal lines at the nearest space to the midpoint
-        let best = 0, bestDiff = Infinity;
-        let running = 0;
+        let best = 0, bestDiff = Infinity, running = 0;
         const total = d.track.length;
         words.forEach((w, i) => {
           running += (i === 0 ? 0 : 1) + w.length;
@@ -1500,23 +1390,15 @@ function buildTopSongsChart(songs) {
         });
         const line1 = words.slice(0, best).join(" ");
         const line2 = words.slice(best).join(" ");
-
-        const xPos = xScale(d.track) + bw / 2;
+        const xPos = xSong(d.track) + bw / 2;
         const textEl = ax.append("text")
           .attr("x", xPos).attr("y", 0)
           .attr("text-anchor", "middle")
           .attr("fill", "rgba(0,0,0,0.6)")
           .attr("font-size", "9px")
           .attr("font-family", "Inter, sans-serif");
-
-        textEl.append("tspan")
-          .attr("x", xPos).attr("dy", "1.8em")
-          .text(line1);
-        if (line2) {
-          textEl.append("tspan")
-            .attr("x", xPos).attr("dy", "1.1em")
-            .text(line2);
-        }
+        textEl.append("tspan").attr("x", xPos).attr("dy", "1.8em").text(line1);
+        if (line2) textEl.append("tspan").attr("x", xPos).attr("dy", "1.1em").text(line2);
       });
     });
 
@@ -1525,16 +1407,14 @@ function buildTopSongsChart(songs) {
   const observer = new IntersectionObserver(entries => {
     if (entries[0].isIntersecting && !animated) {
       animated = true;
-      g.selectAll(".ts-bar")
-        .transition().delay((_d, i) => i * 55).duration(700).ease(d3.easeCubicOut)
-        .attr("y", d => ySpotify(d.spotify))
-        .attr("height", d => chartH - ySpotify(d.spotify));
-      svg.select("#ts-line-clip rect")
-        .transition().delay(300).duration(1000).ease(d3.easeCubicInOut)
-        .attr("width", chartW);
-      g.selectAll(".ts-dot")
-        .transition().delay((_d, i) => i * 55 + 800).duration(300)
-        .attr("opacity", 1);
+      g.selectAll(".ts-bar-spotify")
+        .transition().delay((_d, i) => i * 50).duration(700).ease(d3.easeCubicOut)
+        .attr("y", d => yScale(d.spotifyPct))
+        .attr("height", d => chartH - yScale(d.spotifyPct));
+      g.selectAll(".ts-bar-tiktok")
+        .transition().delay((_d, i) => i * 50 + 150).duration(700).ease(d3.easeCubicOut)
+        .attr("y", d => yScale(d.tiktokPct))
+        .attr("height", d => chartH - yScale(d.tiktokPct));
     }
   }, { threshold: 0.1 });
   observer.observe(container);
@@ -1588,7 +1468,7 @@ function buildArtistsChart(songs) {
     .text("Spotify Streams");
 
   leg.append("rect").attr("x", 130).attr("y", 2)
-    .attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", "#3d6494");
+    .attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", "#BF1363");
   leg.append("text").attr("x", 144).attr("y", 7)
     .attr("dominant-baseline", "middle")
     .attr("fill", "rgba(255,255,255,0.55)")
@@ -1642,7 +1522,7 @@ function buildArtistsChart(songs) {
   groups.append("rect")
     .attr("x", labelW).attr("y", barH + innerGap)
     .attr("width", barAreaW).attr("height", barH)
-    .attr("fill", "rgba(61,100,148,0.06)");
+    .attr("fill", "rgba(191,19,99,0.06)");
 
   // Metric micro-labels on background track
   groups.append("text")
@@ -1655,7 +1535,7 @@ function buildArtistsChart(songs) {
   groups.append("text")
     .attr("x", labelW + 8).attr("y", barH + innerGap + barH / 2)
     .attr("dominant-baseline", "middle")
-    .attr("fill", "rgba(61,100,148,0.45)")
+    .attr("fill", "rgba(191,19,99,0.45)")
     .attr("font-family", "Inter, sans-serif").attr("font-size", "9px")
     .attr("pointer-events", "none").text("TikTok Posts");
 
@@ -1684,7 +1564,7 @@ function buildArtistsChart(songs) {
     .attr("class", "tiktok-bar")
     .attr("x", labelW).attr("y", barH + innerGap)
     .attr("width", 0).attr("height", barH)
-    .attr("fill", "#3d6494").attr("fill-opacity", 0.85);
+    .attr("fill", "#BF1363").attr("fill-opacity", 0.85);
 
   // Value label - Spotify
   groups.append("text")
@@ -1718,7 +1598,7 @@ function buildArtistsChart(songs) {
       showTooltip(event,
         `<strong style="color:#fff">${d.artist}</strong><br>
          <span style="color:rgba(10,255,148,0.7)">Spotify Streams: </span><span style="color:#0aff94">${siFormat(d.spotify)}</span><br>
-         <span style="color:rgba(61,100,148,0.8)">TikTok Posts: </span><span style="color:#7aa4d4">${siFormat(d.tiktok)}</span>`
+         <span style="color:rgba(191,19,99,0.8)">TikTok Posts: </span><span style="color:#BF1363">${siFormat(d.tiktok)}</span>`
       );
     })
     .on("mousemove", moveTooltip)
@@ -1791,7 +1671,7 @@ function buildOutlierBar(containerId, data, valueKey, axisLabel, secondaryKey) {
   const iH = data.length * rowH;
   const height = iH + m.top + m.bottom;
 
-  const barColor = valueKey === "tiktokViews" ? "#ff4d6d" : "#0aff94";
+  const barColor = valueKey === "tiktokViews" ? "#BF1363" : "#0aff94";
   const tickFill = "rgba(255,255,255,0.45)";
   const mainBarH = secondaryKey ? 20 : undefined; // explicit height when secondary present
   const secBarH  = 10;
@@ -2017,6 +1897,76 @@ function buildSuccessSection(songs) {
   }, { threshold: 0.4 });
   statsObserver.observe(statsContainer);
 }
+
+// ─── Side Nav ─────────────────────────────────────────────────────────────────
+(function initSideNav() {
+  const sideNav   = document.getElementById("side-nav");
+  const navItems  = sideNav.querySelectorAll(".side-nav-item");
+  const hero      = document.querySelector(".hero");
+
+  // Show side nav once user scrolls halfway through the hero
+  const heroObserver = new IntersectionObserver(entries => {
+    const entry = entries[0];
+    const ratio = entry.intersectionRatio;
+    if (ratio < 0.5) {
+      sideNav.classList.add("side-nav-visible");
+    } else {
+      sideNav.classList.remove("side-nav-visible");
+    }
+  }, { threshold: [0, 0.5, 1] });
+  heroObserver.observe(hero);
+
+  // Sample background behind each nav item individually
+  function getBgLuminance(x, y) {
+    const elements = document.elementsFromPoint(x, y);
+    for (const el of elements) {
+      if (sideNav.contains(el) || el === sideNav) continue;
+      const bg = window.getComputedStyle(el).backgroundColor;
+      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+        const match = bg.match(/\d+(\.\d+)?/g);
+        if (match) {
+          const [r, g, b] = match.map(Number);
+          return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        }
+      }
+    }
+    return 0; // assume dark
+  }
+
+  function updateSideNavTheme() {
+    navItems.forEach(item => {
+      const rect = item.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top  + rect.height / 2;
+      const luminance = getBgLuminance(x, y);
+      const onLight = luminance > 0.5;
+      item.style.color = onLight
+        ? item.classList.contains("side-nav-active") ? "#000000" : "rgba(0,0,0,0.4)"
+        : item.classList.contains("side-nav-active") ? "#ffffff" : "rgba(255,255,255,0.4)";
+    });
+  }
+
+  window.addEventListener("scroll", updateSideNavTheme, { passive: true });
+  updateSideNavTheme();
+
+  // Highlight active section via IntersectionObserver
+  const sections = document.querySelectorAll(
+    "#big-picture, #trends, #nostalgia, #top-songs, #artists, #outliers, #success"
+  );
+
+  const sectionObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navItems.forEach(item => item.classList.remove("side-nav-active"));
+        const active = sideNav.querySelector(`[data-section="${entry.target.id}"]`);
+        if (active) active.classList.add("side-nav-active");
+        updateSideNavTheme();
+      }
+    });
+  }, { threshold: 0.4 });
+
+  sections.forEach(s => sectionObserver.observe(s));
+})();
 
 // ─── Music Player ─────────────────────────────────────────────────────────────
 (function initMusicPlayer() {
