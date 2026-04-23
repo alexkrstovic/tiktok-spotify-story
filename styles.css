@@ -1355,6 +1355,12 @@ h2 {
   color: rgba(30,30,30,0.45);
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.footer-meta:hover {
+  color: rgba(30,30,30,0.8);
 }
 
 .footer-nav a:hover {
