@@ -469,9 +469,12 @@ function buildScatterplot(songs) {
       const matched = q === "" ||
         d.track.toLowerCase().includes(q) ||
         d.artist.toLowerCase().includes(q);
+      const restingOpacity = matched ? (q === "" ? 0.45 : 0.85) : 0.06;
       d3.select(this)
+        .attr("data-resting-opacity", restingOpacity)
+        .style("pointer-events", restingOpacity <= 0.1 ? "none" : "all")
         .transition().duration(200)
-        .attr("fill-opacity", matched ? (q === "" ? 0.45 : 0.85) : 0.06)
+        .attr("fill-opacity", restingOpacity)
         .attr("stroke", (matched && q !== "") ? "#ffffff" : "none")
         .attr("stroke-width", 1);
     });
@@ -785,7 +788,10 @@ function drawScatter(containerId, width, data, slope, intercept, xDomainMin, xDo
     })
     .on("mousemove", moveTooltip)
     .on("mouseleave", function () {
-      d3.select(this).attr("fill-opacity", 0.45).attr("stroke", "none");
+      const resting = parseFloat(d3.select(this).attr("data-resting-opacity")) || 0.45;
+      d3.select(this)
+        .attr("fill-opacity", resting)
+        .attr("stroke", resting >= 0.85 ? "#ffffff" : "none");
       hideTooltip();
     });
 
