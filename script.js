@@ -1488,7 +1488,7 @@ function buildArtistsChart(songs) {
     .attr("fill", "rgba(255,255,255,0.25)")
     .attr("font-family", "Inter, sans-serif").attr("font-size", "10px")
     .attr("font-style", "italic")
-    .text("each bar scaled independently");
+    .text("Each bar scaled independently");
 
   // ── Artist rows ─────────────────────────────────────────────────────────────
   const groups = svg.selectAll(".artist-group")
