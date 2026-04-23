@@ -1396,9 +1396,9 @@ h2 {
 }
 
 /* ══════════════════════════════════════════════════
-   RESPONSIVE — iPad Portrait (max 768px)
+   RESPONSIVE — iPad Portrait (max 900px — covers 11" iPad at 834px)
 ══════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* Stack all two-col sections: text on top, chart below */
   .section-two-col {
     flex-direction: column;
@@ -1544,7 +1544,7 @@ h2 {
 }
 
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   #side-nav { right: 12px; }
 }
 
