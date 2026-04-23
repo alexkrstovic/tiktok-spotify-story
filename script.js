@@ -275,13 +275,14 @@ const chartContainers = [
 function rebuildCharts() {
   if (!globalSongs) return;
 
-  // Remove elements inserted outside chart containers (expand buttons, legends, etc.)
+  // Remove elements inserted outside chart containers (expand buttons, legends, overlay, etc.)
   document.querySelectorAll(".chart-expand-btn").forEach(btn => {
     const wrap = btn.closest("div");
     if (wrap) wrap.remove();
     else btn.remove();
   });
   document.querySelectorAll(".scatter-inline-legend, .ts-sort-wrap").forEach(el => el.remove());
+  document.querySelectorAll(".chart-overlay").forEach(el => el.remove());
 
   chartContainers.forEach(id => {
     const el = document.getElementById(id);
@@ -478,11 +479,12 @@ function buildScatterplot(songs) {
 
   expandBtn.addEventListener("click", () => {
     overlay.classList.remove("hidden");
-    const fsContainer = document.getElementById("scatterplot-fs");
+    const fsContainer = overlay.querySelector("#scatterplot-fs");
     fsContainer.innerHTML = "";
     const fsW = Math.round(window.innerWidth  * 0.92);
     const fsH = Math.round(window.innerHeight * 0.78);
-    const fsChart = drawScatter("scatterplot-fs", fsW, data, slope, intercept, xDomainMin, xDomainMax, true, fsH);
+    const fsContainerId = fsContainer.id;
+    const fsChart = drawScatter(fsContainerId, fsW, data, slope, intercept, xDomainMin, xDomainMax, true, fsH);
     fsDotsRef = fsChart.dots;
     fsSvgRef  = fsChart.svg;
     fsZoomRef = fsChart.zoom;
@@ -493,10 +495,10 @@ function buildScatterplot(songs) {
     applyFilters();
 
     // Reset view button
-    document.getElementById("scatter-reset-btn").addEventListener("click", () => {
+    overlay.querySelector("#scatter-reset-btn").addEventListener("click", () => {
       fsSvgRef.transition().duration(600).ease(d3.easeCubicInOut)
         .call(fsZoomRef.transform, d3.zoomIdentity);
-      document.getElementById("scatter-zoom-level").textContent = "100%";
+      overlay.querySelector("#scatter-zoom-level").textContent = "100%";
     });
 
     document.body.style.overflow = "hidden";
