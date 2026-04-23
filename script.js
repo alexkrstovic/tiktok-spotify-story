@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
       heroVid.style.opacity = "1";
     }, { once: true });
 
-    setTimeout(() => heroVid.play(), 7000);
+    setTimeout(() => heroVid.play(), 3000);
 
   }
 

@@ -1396,6 +1396,63 @@ h2 {
 }
 
 /* ══════════════════════════════════════════════════
+   RESPONSIVE — iPad Portrait (max 768px)
+══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Stack all two-col sections: text on top, chart below */
+  .section-two-col {
+    flex-direction: column;
+    padding: 3rem 2rem;
+  }
+
+  /* Sections where chart comes first in DOM should flip to text-top */
+  #big-picture,
+  #nostalgia,
+  #artists {
+    flex-direction: column-reverse;
+  }
+
+  /* Trends already has text first in DOM, so column is correct */
+  #trends {
+    flex-direction: column;
+  }
+
+  .col-chart,
+  .col-text {
+    flex: unset;
+    width: 100%;
+  }
+
+  #big-picture { padding-left: 2rem; }
+
+  /* Top Songs */
+  .section-top-songs { padding-top: 3rem; }
+  .top-songs-text { max-width: 100%; padding: 0 2rem 2rem; }
+  #top-songs-chart { width: calc(100% - 32px); margin: 0 16px; }
+
+  /* Outliers */
+  .section-outliers { padding: 3rem 2rem; }
+  .outlier-charts-row { flex-direction: column; gap: 48px; }
+
+  /* Verdict */
+  .section-success { min-height: auto; padding: 3rem 2rem; }
+  .success-content { max-width: 100%; }
+  .success-stats { flex-direction: column; gap: 24px; }
+  .stat-label { max-width: 100%; }
+
+  /* Footer */
+  .footer {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .footer-nav {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
    RESPONSIVE — Mobile (max 640px)
 ══════════════════════════════════════════════════ */
 @media (max-width: 640px) {
@@ -1487,7 +1544,11 @@ h2 {
 }
 
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
+  #side-nav { right: 12px; }
+}
+
+@media (max-width: 640px) {
   #side-nav { display: none; }
 }
 
